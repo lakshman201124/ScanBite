@@ -1,0 +1,42 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+
+    - name: Install dependencies
+      working-directory: qrdine
+      run: pnpm install --frozen-lockfile
+
+    - name: Install Playwright Browsers
+      working-directory: qrdine
+      run: npx playwright install chromium --with-deps
+
+    - name: Run Playwright Tests
+      working-directory: qrdine
+      run: npx playwright test --reporter=list,github
+      env:
+        TEST_OTP_BYPASS: "true"
+        TEST_ADMIN_EMAIL: admin@spicegarden.com
+        TEST_ADMIN_PASSWORD: admin123
+        TEST_CHEF_SLUG: spice-garden
+        TEST_CHEF_PIN: "1234"

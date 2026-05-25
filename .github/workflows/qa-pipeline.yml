@@ -1,0 +1,640 @@
+name: ScanBite QA Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  TEST_ADMIN_EMAIL: admin@spicegarden.com
+  TEST_ADMIN_PASSWORD: admin123
+  TEST_CHEF_SLUG: spice-garden
+  TEST_CHEF_PIN: "1234"
+  TEST_OTP_BYPASS: "true"
+  NODE_VERSION: "20"
+
+# ─── Shared setup composite ────────────────────────────────────────────────────
+# Each job re-uses the same install steps. pnpm + node_modules are cached by
+# actions/setup-node so the install is a cache-hit on all jobs after the first.
+
+jobs:
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 0 — Static Analysis (TypeScript + ESLint)
+  # Fastest gate — no browser needed. Fails immediately on type errors or lint.
+  # ════════════════════════════════════════════════════════════════════════════
+  static-analysis:
+    name: "Static Analysis (TS + ESLint)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript type check
+        working-directory: qrdine
+        run: pnpm type-check
+
+      - name: ESLint
+        working-directory: qrdine
+        run: pnpm lint
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 1 — Auth Tests  (gates all browser jobs)
+  # Runs unauthenticated. Covers signup, login, JWT, CSRF, rate limiting.
+  # ════════════════════════════════════════════════════════════════════════════
+  auth-tests:
+    name: "Auth Tests (UI + API)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: static-analysis
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run auth tests
+        working-directory: qrdine
+        run: npx playwright test --project=auth-tests --reporter=list,json,html
+
+      - name: Upload auth report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-auth
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 2 — API Tests  (needs auth-tests to confirm auth layer works)
+  # ════════════════════════════════════════════════════════════════════════════
+  api-tests:
+    name: "API Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: auth-tests
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run API tests
+        working-directory: qrdine
+        run: npx playwright test --project=api-tests --reporter=list,json,html
+
+      - name: Upload API report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-api
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 3 — Security Tests
+  # Tenant isolation, auth bypass, input validation. Always unauthenticated.
+  # ════════════════════════════════════════════════════════════════════════════
+  security-tests:
+    name: "Security Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: auth-tests
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run security tests
+        working-directory: qrdine
+        run: npx playwright test --project=security-tests --reporter=list,json,html
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-security
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 4 — Admin UI Tests  (pre-authenticated desktop Chrome 1440×900)
+  # Covers: dashboard, orders, menu, tables, billing, analytics, inventory,
+  #         settings, staff, export — 11 spec files.
+  # ════════════════════════════════════════════════════════════════════════════
+  admin-ui:
+    name: "Admin UI (Desktop)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [api-tests, security-tests]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+      RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run admin UI tests
+        working-directory: qrdine
+        run: npx playwright test --project=admin-desktop --reporter=list,json,html
+
+      - name: Upload admin UI report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-admin-ui
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 5 — Customer Mobile Tests  (Pixel 7 viewport)
+  # Covers: menu, cart, checkout, order tracking — 4 spec files.
+  # ════════════════════════════════════════════════════════════════════════════
+  customer-mobile:
+    name: "Customer Mobile (Pixel 7)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [api-tests, security-tests]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run customer mobile tests
+        working-directory: qrdine
+        run: npx playwright test --project=customer-mobile --reporter=list,json,html
+
+      - name: Upload customer report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-customer-mobile
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 6 — Chef / KDS Tests  (iPad Pro 11 viewport)
+  # ════════════════════════════════════════════════════════════════════════════
+  chef-kds:
+    name: "Chef / KDS (iPad Pro)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [api-tests, security-tests]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run chef / KDS tests
+        working-directory: qrdine
+        run: npx playwright test --project=chef-tablet --reporter=list,json,html
+
+      - name: Upload KDS report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-chef-kds
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 7 — Edge Cases & Regression
+  # ════════════════════════════════════════════════════════════════════════════
+  edge-cases:
+    name: "Edge Cases & Regression"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [api-tests, security-tests]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run edge case tests
+        working-directory: qrdine
+        run: npx playwright test --project=edge-cases --reporter=list,json,html
+
+      - name: Upload edge cases report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-edge-cases
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 8 — Design Compliance Audit
+  # Checks brand tokens, no-emoji rules, shadow system, typography against
+  # every admin + customer surface. Runs after UI jobs are green.
+  # ════════════════════════════════════════════════════════════════════════════
+  design-compliance:
+    name: "Design Compliance Audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [admin-ui, customer-mobile]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (all browsers for visual accuracy)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run design compliance tests
+        working-directory: qrdine
+        run: npx playwright test --project=design-compliance --reporter=list,json,html
+
+      - name: Upload design compliance report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-design-compliance
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 9 — Real-time Socket Tests
+  # Socket.IO event flow: order:created, order:updated, payment:confirmed.
+  # Runs last — depends on app being fully exercised by prior jobs.
+  # ════════════════════════════════════════════════════════════════════════════
+  realtime-tests:
+    name: "Real-time Socket Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [admin-ui, customer-mobile, chef-kds]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright (Chromium only)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+
+      - name: Run real-time tests
+        working-directory: qrdine
+        run: npx playwright test --project=realtime-tests --reporter=list,json,html
+
+      - name: Upload realtime report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-realtime
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 10 — UI Quality Agent Pipeline (Screenshot → Audit → Check critical)
+  # Runs the local Node.js agent pipeline from agents/run-pipeline.js.
+  # Only runs on push to main (not on every PR — it's expensive).
+  # ════════════════════════════════════════════════════════════════════════════
+  ui-quality-audit:
+    name: "UI Quality Audit (Design Agent)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: [admin-ui, customer-mobile, chef-kds]
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install qrdine dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+
+      - name: Install agent dependencies
+        working-directory: agents
+        run: npm install
+
+      - name: Start app in background
+        working-directory: qrdine
+        run: pnpm dev &
+        env:
+          PORT: 3000
+
+      - name: Wait for app to be ready
+        run: npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: Run screenshot + audit pipeline (levels 1 & 2)
+        working-directory: .
+        run: node agents/run-pipeline.js --level=1 && node agents/run-pipeline.js --level=2
+
+      - name: Fail if any CRITICAL design issues found
+        working-directory: .
+        run: node agents/check-critical-failures.js
+
+      - name: Upload design audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-ui-quality-audit
+          path: agents/output/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 11 — Final Gate (summary job — all non-optional jobs must pass)
+  # ════════════════════════════════════════════════════════════════════════════
+  all-clear:
+    name: "All Clear ✅"
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - static-analysis
+      - auth-tests
+      - api-tests
+      - security-tests
+      - admin-ui
+      - customer-mobile
+      - chef-kds
+      - edge-cases
+      - design-compliance
+      - realtime-tests
+    steps:
+      - name: Check all jobs passed
+        run: |
+          results=(
+            "${{ needs.static-analysis.result }}"
+            "${{ needs.auth-tests.result }}"
+            "${{ needs.api-tests.result }}"
+            "${{ needs.security-tests.result }}"
+            "${{ needs.admin-ui.result }}"
+            "${{ needs.customer-mobile.result }}"
+            "${{ needs.chef-kds.result }}"
+            "${{ needs.edge-cases.result }}"
+            "${{ needs.design-compliance.result }}"
+            "${{ needs.realtime-tests.result }}"
+          )
+          failed=0
+          for result in "${results[@]}"; do
+            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+              echo "❌ A required job failed: $result"
+              failed=1
+            fi
+          done
+          if [[ $failed -eq 1 ]]; then
+            exit 1
+          fi
+          echo "✅ All required jobs passed."

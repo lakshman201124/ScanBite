@@ -1,0 +1,20 @@
+{
+  "name": "scanbite-ui-agents",
+  "version": "1.0.0",
+  "description": "Three-level UI quality agent pipeline for ScanBite",
+  "type": "commonjs",
+  "scripts": {
+    "screenshot": "node 01_screenshotter.js",
+    "audit": "node 02_auditor.js",
+    "enhance": "node 03_enhancer.js",
+    "pipeline": "node run-pipeline.js",
+    "ci-check": "node check-critical-failures.js"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "chalk": "^4.1.2",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.4.5",
+    "wait-on": "^7.2.0"
+  }
+}

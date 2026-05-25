@@ -1,0 +1,11 @@
+﻿node_modules/
+.env.local
+.env
+*.env
+.next/
+qrdine/.next/
+qrdine/node_modules/
+qrdine/test-results/
+qrdine/.playwright/
+agents/output/screenshots/
+agents/node_modules/
