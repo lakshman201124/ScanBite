@@ -1,0 +1,23 @@
+{
+  "name": "qrdine-socket-server",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node --esm index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@upstash/redis": "^1.38.0",
+    "ioredis": "^5.3.2",
+    "jose": "^6.2.3",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

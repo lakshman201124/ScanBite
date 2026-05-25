@@ -1,0 +1,17 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "executionArgs": {
+    "projectName": "qrdine",
+    "projectPath": "C:/Users/LAKSHMAN/Downloads/ScanBite/qrdine",
+    "testIds": [],
+    "additionalInstruction": "Phase 2 audit for QR Dine/ScanBite. Test credentials: admin@spicegarden.com / admin123. Base URL http://localhost:3000. Focus on: /dashboard/menu (category CRUD, item CRUD, preview button), /dashboard/tables (QR view/download), customer flow /m/spice-garden with QR token from tables API after login, cart add/checkout/place order. Report broken buttons, 404 links, console errors. Compare mobile customer UI to Swiggy-grade expectations.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-s3su1tHO8ebQ9IA-QnaGHhfdnbDhBUmiQWUQKUFR860IsmyIQPDTxKggL2UwFF4Tu1cIADcnTk0B6Qm6yVpCPgKm45hiu_Dv_P5CRCbAapRI3kjnx0V4x_jptzF0CxjUedw"
+    }
+  },
+  "serverPort": 63275
+}
