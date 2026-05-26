@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { jsonToCsv } from "@/lib/export";
 import { format } from "date-fns";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.restaurantId) return new Response("Unauthorized", { status: 401 });

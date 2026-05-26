@@ -29,6 +29,7 @@ test.describe('Settings page load', () => {
 
   test('CGST and SGST rate inputs are visible', async ({ page }) => {
     await page.goto('/dashboard/settings');
+    await page.locator('button:has-text("Tax & Billing")').click();
     const cgstInput = page.locator('input[name*="cgst" i], input[name*="CGST"]').first();
     const sgstInput = page.locator('input[name*="sgst" i], input[name*="SGST"]').first();
     await expect(cgstInput).toBeVisible({ timeout: 15_000 });
@@ -39,15 +40,17 @@ test.describe('Settings page load', () => {
 // ─── API: PATCH /api/admin/settings ──────────────────────────────────────────
 
 test.describe('PATCH /api/admin/settings', () => {
-  test('unauthenticated request returns 401', async ({ request }) => {
-    const res = await request.patch(`${BASE_URL}/api/admin/settings`, {
+  test('unauthenticated request returns 401', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.patch(`${BASE_URL}/api/admin/settings`, {
       data: { name: 'New Name' },
     });
     expect([401, 403]).toContain(res.status());
   });
 
-  test('GET /api/admin/settings unauthenticated returns 401', async ({ request }) => {
-    const res = await request.get(`${BASE_URL}/api/admin/settings`);
+  test('GET /api/admin/settings unauthenticated returns 401', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.get(`${BASE_URL}/api/admin/settings`);
     expect([401, 403]).toContain(res.status());
   });
 
@@ -106,8 +109,9 @@ test.describe('Brand colour update', () => {
 // ─── Logo Upload ──────────────────────────────────────────────────────────────
 
 test.describe('Logo upload — POST /api/upload', () => {
-  test('unauthenticated upload returns 401', async ({ request }) => {
-    const res = await request.post(`${BASE_URL}/api/upload`);
+  test('unauthenticated upload returns 401', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.post(`${BASE_URL}/api/upload`);
     expect([401, 403]).toContain(res.status());
   });
 

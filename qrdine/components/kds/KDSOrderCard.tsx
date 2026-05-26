@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { KDSItemRow } from "./KDSItemRow";
-import type { OrderStatus } from "@/types";
 
 interface KDSOrder {
   orderId: string;

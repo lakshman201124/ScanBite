@@ -82,13 +82,13 @@ test.describe('4.9 Chef Login API — schema validation (OTP flow)', () => {
 
   test('missing phone field returns 400/422', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-      data: { code: '123456' },
+      data: { pin: '123456' },
     });
     expect(res.status()).toBeGreaterThanOrEqual(400);
     expect(res.status()).toBeLessThan(500);
   });
 
-  test('missing code field returns 400/422', async ({ request }) => {
+  test('missing pin field returns 400/422', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
       data: { phone: '+919876543210' },
     });
@@ -96,12 +96,12 @@ test.describe('4.9 Chef Login API — schema validation (OTP flow)', () => {
     expect(res.status()).toBeLessThan(500);
   });
 
-  test('valid {phone, code} shape passes schema — OTP verified or 401', async ({ request }) => {
-    // With correct shape but invalid OTP, should get 401 (OTP failed) — NOT 422 (schema error)
+  test('valid {phone, pin} shape passes schema — PIN verified or 401/404', async ({ request }) => {
+    // With correct shape but invalid PIN, should get 401 or 404 — NOT 422 (schema error)
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-      data: { phone: '+919876543210', code: '000000' },
+      data: { phone: '+919876543210', pin: '000000' },
     });
-    // 401 = schema OK, OTP invalid. 422 = schema error (bad).
+    // 401 = schema OK, PIN invalid. 422 = schema error (bad).
     expect([401, 404]).toContain(res.status());
   });
 });

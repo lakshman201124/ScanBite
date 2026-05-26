@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-export function jsonToCsv(items: any[], headers: string[], keys: string[]): string {
+export function jsonToCsv(items: Record<string, unknown>[], headers: string[], keys: string[]): string {
   const csvRows = [];
   
   csvRows.push(headers.join(","));

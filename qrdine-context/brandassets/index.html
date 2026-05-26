@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ScanBite — Dashboard &amp; Menu Ordering</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="customer.jsx"></script>
+  <script type="text/babel" src="track.jsx"></script>
+  <script type="text/babel" src="admin.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+  (function () {
+    const { DesignCanvas: DC, DCSection: DCSec, DCArtboard: DCArt, DCPostIt: DCPost } = window;
+    const { IOSDevice, ScreenMenu, ScreenDetail, ScreenCart, ScreenTrack,
+            ScreenDashboard, ScreenKDS, ScreenMenuManager } = window;
+    // Re-alias for JSX <Tag> usage
+    const DesignCanvas = DC, DCSection = DCSec, DCArtboard = DCArt, DCPostIt = DCPost;
+
+    // Phone frame helper — wraps a screen in the iOS device chrome
+    function Phone({ children, title }) {
+      return (
+        <IOSDevice width={402} height={874} title={title}>
+          {children}
+        </IOSDevice>
+      );
+    }
+
+    function App() {
+      return (
+        <div data-screen-label="ScanBite Canvas">
+          <DesignCanvas>
+            <DCSection
+              id="brand"
+              title="ScanBite — Scan. Order. Enjoy."
+              subtitle="A multi-tenant restaurant OS. One QR scan replaces the entire waiter-ordering cycle, with a Swiggy-grade UX customers actually enjoy.">
+              <DCPostIt color="coral">
+                <b>Visual system</b><br/>
+                Warm coral primary (#FF4D3D) on a cream surface · Plus Jakarta Sans for UI, Instrument Serif italic for emotion · 20–28px radii · soft warm shadows · real food photography.
+              </DCPostIt>
+            </DCSection>
+
+            {/* CUSTOMER MOBILE SCREENS */}
+            <DCSection
+              id="customer"
+              title="Customer · Mobile"
+              subtitle="What guests see after scanning the QR at table T-12. No login, no app install — just the menu.">
+              <DCArtboard id="menu"   label="1. Menu" width={402} height={874}>
+                <Phone><ScreenMenu /></Phone>
+              </DCArtboard>
+              <DCArtboard id="detail" label="2. Dish detail" width={402} height={874}>
+                <Phone><ScreenDetail /></Phone>
+              </DCArtboard>
+              <DCArtboard id="cart"   label="3. Bag &amp; checkout" width={402} height={874}>
+                <Phone><ScreenCart /></Phone>
+              </DCArtboard>
+              <DCArtboard id="track"  label="4. Live order tracking" width={402} height={874}>
+                <Phone><ScreenTrack /></Phone>
+              </DCArtboard>
+            </DCSection>
+
+            {/* RESTAURANT ADMIN DESKTOP */}
+            <DCSection
+              id="admin"
+              title="Restaurant admin · Desktop"
+              subtitle="Owner and floor manager view. Run the floor in real time — KPIs, live orders, kitchen display, menu management.">
+              <DCArtboard id="dash"   label="A. Dashboard"     width={1280} height={820}>
+                <ScreenDashboard />
+              </DCArtboard>
+              <DCArtboard id="kds"    label="B. Kitchen display" width={1280} height={820}>
+                <ScreenKDS />
+              </DCArtboard>
+              <DCArtboard id="menumgr" label="C. Menu manager"  width={1280} height={820}>
+                <ScreenMenuManager />
+              </DCArtboard>
+            </DCSection>
+          </DesignCanvas>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  })();
+  </script>
+</body>
+</html>

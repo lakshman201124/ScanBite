@@ -188,36 +188,36 @@ test.describe('POST /api/auth/[...nextauth] (admin login)', () => {
 // ─── POST /api/auth/chef-login ──────────────────────────────────────────────
 
 test.describe('POST /api/auth/chef-login', () => {
-  test('invalid OTP returns 401', async ({ request }) => {
+  test('invalid PIN returns 401/404', async ({ request }) => {
     const res = await chefLogin(request, '+919876543210', '999999');
     expect([401, 404]).toContain(res.status());
   });
 
   test('missing phone field returns 400 validation error', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-      data: { code: '000000' },
+      data: { pin: '000000' },
     });
     expect(res.status()).toBeGreaterThanOrEqual(400);
     expect(res.status()).toBeLessThan(500);
   });
 
-  test('OTP shorter than 6 digits rejected with 400', async ({ request }) => {
+  test('PIN shorter than 6 digits rejected with 400', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-      data: { code: '12345', phone: '+919876543210' },
+      data: { pin: '12345', phone: '+919876543210' },
     });
     expect(res.status()).toBeGreaterThanOrEqual(400);
     expect(res.status()).toBeLessThan(500);
   });
 
-  test('non-numeric OTP rejected with 400', async ({ request }) => {
+  test('non-numeric PIN rejected with 400', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-      data: { code: 'abcdef', phone: '+919876543210' },
+      data: { pin: 'abcdef', phone: '+919876543210' },
     });
     expect(res.status()).toBeGreaterThanOrEqual(400);
     expect(res.status()).toBeLessThan(500);
   });
 
-  test('missing code rejected with 400', async ({ request }) => {
+  test('missing PIN rejected with 400', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
       data: { phone: '+919876543210' },
     });

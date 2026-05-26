@@ -194,7 +194,7 @@ function AnalyticsContent() {
           </>
         ) : error || !data ? (
           <div style={{ padding: "80px 0", textAlign: "center" }}>
-            <div style={{ width: 56, height: 56, borderRadius: 18, background: "var(--surface-2)", display: "grid", placeItems: "center", margin: "0 auto 16px", fontSize: 26 }}>📊</div>
+            <div style={{ width: 56, height: 56, borderRadius: 18, background: "var(--surface-2)", display: "grid", placeItems: "center", margin: "0 auto 16px", fontSize: 26 }}></div>
             <p style={{ font: "700 15px var(--sans)", color: "var(--ink)", margin: 0 }}>Failed to load analytics</p>
             <p style={{ font: "500 12px var(--sans)", color: "var(--muted)", margin: "6px 0 0" }}>Try refreshing the page</p>
           </div>

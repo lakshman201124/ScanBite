@@ -1,0 +1,309 @@
+{
+  "timestamp": "2026-05-26T10:00:07.413Z",
+  "appUrl": "http://localhost:3000",
+  "mode": "full",
+  "screenshots": [
+    {
+      "id": "customer-menu--default",
+      "path": "output/screenshots/customer-menu--default.png",
+      "url": "/m/demo",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "default",
+      "screen": "customer-menu",
+      "auth": null
+    },
+    {
+      "id": "customer-menu--scroll-halfway",
+      "path": "output/screenshots/customer-menu--scroll-halfway.png",
+      "url": "/m/demo",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "scroll-halfway",
+      "screen": "customer-menu",
+      "auth": null
+    },
+    {
+      "id": "customer-menu--category-active",
+      "path": "output/screenshots/customer-menu--category-active.png",
+      "url": "/m/demo",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "category-active",
+      "screen": "customer-menu",
+      "auth": null
+    },
+    {
+      "id": "customer-item-detail--item-sheet-open",
+      "path": "output/screenshots/customer-item-detail--item-sheet-open.png",
+      "url": "/m/demo",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "item-sheet-open",
+      "screen": "customer-item-detail",
+      "auth": null
+    },
+    {
+      "id": "customer-cart--cart-open",
+      "path": "output/screenshots/customer-cart--cart-open.png",
+      "url": "/m/demo",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "cart-open",
+      "screen": "customer-cart",
+      "auth": null
+    },
+    {
+      "id": "customer-checkout--default",
+      "path": "output/screenshots/customer-checkout--default.png",
+      "url": "/m/demo/checkout",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "default",
+      "screen": "customer-checkout",
+      "auth": null
+    },
+    {
+      "id": "customer-tracking--preparing-state",
+      "path": "output/screenshots/customer-tracking--preparing-state.png",
+      "url": "/m/demo/order/demo-order-id",
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "deviceScaleFactor": 2,
+        "isMobile": true
+      },
+      "state": "preparing-state",
+      "screen": "customer-tracking",
+      "auth": null
+    },
+    {
+      "id": "admin-login--default",
+      "path": "output/screenshots/admin-login--default.png",
+      "url": "/login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-login",
+      "auth": null
+    },
+    {
+      "id": "admin-login--filled",
+      "path": "output/screenshots/admin-login--filled.png",
+      "url": "/login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "filled",
+      "screen": "admin-login",
+      "auth": null
+    },
+    {
+      "id": "admin-login--error",
+      "path": "output/screenshots/admin-login--error.png",
+      "url": "/login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "error",
+      "screen": "admin-login",
+      "auth": null
+    },
+    {
+      "id": "chef-login--default",
+      "path": "output/screenshots/chef-login--default.png",
+      "url": "/chef-login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "chef-login",
+      "auth": null
+    },
+    {
+      "id": "admin-dashboard--default",
+      "path": "output/screenshots/admin-dashboard--default.png",
+      "url": "/dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-dashboard",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-dashboard--hover-nav",
+      "path": "output/screenshots/admin-dashboard--hover-nav.png",
+      "url": "/dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "hover-nav",
+      "screen": "admin-dashboard",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-orders--default",
+      "path": "output/screenshots/admin-orders--default.png",
+      "url": "/dashboard/orders",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-orders",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-orders--order-modal-open",
+      "path": "output/screenshots/admin-orders--order-modal-open.png",
+      "url": "/dashboard/orders",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "order-modal-open",
+      "screen": "admin-orders",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-menu--default",
+      "path": "output/screenshots/admin-menu--default.png",
+      "url": "/dashboard/menu",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-menu",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-tables--default",
+      "path": "output/screenshots/admin-tables--default.png",
+      "url": "/dashboard/tables",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-tables",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-billing--default",
+      "path": "output/screenshots/admin-billing--default.png",
+      "url": "/dashboard/billing",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-billing",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-analytics--default",
+      "path": "output/screenshots/admin-analytics--default.png",
+      "url": "/dashboard/analytics",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-analytics",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-inventory--default",
+      "path": "output/screenshots/admin-inventory--default.png",
+      "url": "/dashboard/inventory",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-inventory",
+      "auth": "admin"
+    },
+    {
+      "id": "admin-settings--default",
+      "path": "output/screenshots/admin-settings--default.png",
+      "url": "/dashboard/settings",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "admin-settings",
+      "auth": "admin"
+    },
+    {
+      "id": "kds-main--default",
+      "path": "output/screenshots/kds-main--default.png",
+      "url": "/kds",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "state": "default",
+      "screen": "kds-main",
+      "auth": "chef"
+    },
+    {
+      "id": "kds-main--orders-visible",
+      "path": "output/screenshots/kds-main--orders-visible.png",
+      "url": "/kds",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "state": "orders-visible",
+      "screen": "kds-main",
+      "auth": "chef"
+    },
+    {
+      "id": "onboarding--default",
+      "path": "output/screenshots/onboarding--default.png",
+      "url": "/onboarding",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "state": "default",
+      "screen": "onboarding",
+      "auth": "admin"
+    }
+  ]
+}

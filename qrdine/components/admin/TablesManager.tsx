@@ -103,7 +103,7 @@ function elapsedLabel(mins: number): string {
 }
 
 async function buildQRDataUrl(url: string) {
-  return QRCode.toDataURL(url, { width: 260, margin: 2, color: { dark: "#14131A", light: "#FFFFFF" } });
+  return QRCode.toDataURL(url, { width: 260, margin: 2, color: { dark: "var(--ink)", light: "var(--surface)" } });
 }
 
 /* ─── Status metadata ─────────────────────────────────────── */
@@ -113,16 +113,16 @@ const STATUS_META: Record<FloorStatus, {
   cardBg: string; cardBorder: string; iconColor: string;
 }> = {
   open: {
-    label: "AVAILABLE", color: "#1E9E5E", bg: "var(--green-soft)", border: "rgba(30,158,94,.25)",
-    cardBg: "var(--green-soft)", cardBorder: "rgba(30,158,94,.25)", iconColor: "#1E9E5E",
+    label: "AVAILABLE", color: "var(--green)", bg: "var(--green-soft)", border: "rgba(30,158,94,.25)",
+    cardBg: "var(--green-soft)", cardBorder: "rgba(30,158,94,.25)", iconColor: "var(--green)",
   },
   seated: {
-    label: "OCCUPIED", color: "#F2A500", bg: "var(--amber-soft)", border: "rgba(242,165,0,.30)",
-    cardBg: "var(--amber-soft)", cardBorder: "rgba(242,165,0,.30)", iconColor: "#F2A500",
+    label: "OCCUPIED", color: "var(--amber)", bg: "var(--amber-soft)", border: "rgba(242,165,0,.30)",
+    cardBg: "var(--amber-soft)", cardBorder: "rgba(242,165,0,.30)", iconColor: "var(--amber)",
   },
   ordering: {
-    label: "ORDERING", color: "#F2A500", bg: "var(--amber-soft)", border: "rgba(242,165,0,.30)",
-    cardBg: "var(--amber-soft)", cardBorder: "rgba(242,165,0,.30)", iconColor: "#F2A500",
+    label: "ORDERING", color: "var(--amber)", bg: "var(--amber-soft)", border: "rgba(242,165,0,.30)",
+    cardBg: "var(--amber-soft)", cardBorder: "rgba(242,165,0,.30)", iconColor: "var(--amber)",
   },
   bill_ready: {
     label: "BILL READY", color: "var(--brand)", bg: "var(--brand-soft)", border: "rgba(255,77,61,.30)",
@@ -1545,7 +1545,7 @@ function TablesManagerInner({ restaurantId, restaurantSlug }: Props) {
         {[
           { label: "Total Tables",  value: totalTables, color: "var(--ink)" },
           { label: "Available",     value: available,   color: "var(--green)" },
-          { label: "Occupied",      value: occupied,    color: "#F2A500" },
+          { label: "Occupied",      value: occupied,    color: "var(--amber)" },
           { label: "Reserved",      value: reserved,    color: "#2E6EF7" },
         ].map(kpi => (
           <div key={kpi.label} style={{
@@ -1600,7 +1600,7 @@ function TablesManagerInner({ restaurantId, restaurantSlug }: Props) {
                   width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
                   background:
                     key === "open" ? "var(--green)" :
-                    key === "seated" || key === "ordering" ? "#F2A500" :
+                    key === "seated" || key === "ordering" ? "var(--amber)" :
                     key === "bill_ready" ? "var(--brand)" :
                     "#2E6EF7",
                 }} />

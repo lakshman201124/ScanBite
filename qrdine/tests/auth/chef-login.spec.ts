@@ -30,7 +30,7 @@ test('3.1 chef-login page shows phone number input and Send OTP button', async (
 
   // Send OTP button present
   await expect(
-    page.locator('button').filter({ hasText: /send otp|send code|otp/i }).first()
+    page.locator('button').filter({ hasText: /continue|send otp|send code|otp/i }).first()
   ).toBeVisible();
 });
 
@@ -42,7 +42,7 @@ test('3.2 invalid phone number shows error before sending OTP', async ({ page })
   const phoneInput = page.locator('input[type="tel"]').first();
   await phoneInput.fill('abc');
 
-  await page.locator('button').filter({ hasText: /send otp|send/i }).first().click();
+  await page.locator('button').filter({ hasText: /continue|send otp|send/i }).first().click();
 
   // Error message should appear (either inline or alert)
   await expect(
@@ -60,7 +60,7 @@ test('3.2 invalid phone number shows error before sending OTP', async ({ page })
 test('3.3 empty phone field disables Send OTP button', async ({ page }) => {
   await gotoChefLogin(page);
 
-  const sendBtn = page.locator('button').filter({ hasText: /send otp|send/i }).first();
+  const sendBtn = page.locator('button').filter({ hasText: /continue|send otp|send/i }).first();
   // Button should be disabled when phone is empty
   const isDisabled = await sendBtn.isDisabled();
   expect(isDisabled).toBe(true);
@@ -74,7 +74,7 @@ test('3.4 valid phone number enables Send OTP button', async ({ page }) => {
   const phoneInput = page.locator('input[type="tel"]').first();
   await phoneInput.fill('9876543210');
 
-  const sendBtn = page.locator('button').filter({ hasText: /send otp|send/i }).first();
+  const sendBtn = page.locator('button').filter({ hasText: /continue|send otp|send/i }).first();
   await expect(sendBtn).not.toBeDisabled({ timeout: 3_000 });
 });
 
@@ -85,7 +85,7 @@ test('3.5 after entering phone and clicking Send OTP, OTP input boxes appear', a
 
   // Fill phone
   await page.locator('input[type="tel"]').first().fill('9876543210');
-  await page.locator('button').filter({ hasText: /send otp|send/i }).first().click();
+  await page.locator('button').filter({ hasText: /continue|send otp|send/i }).first().click();
 
   // Either: OTP boxes appear (success), or error appears (Twilio not configured)
   await page.waitForTimeout(2_500);
@@ -112,7 +112,7 @@ test('3.6 back button on OTP step returns to phone step', async ({ page }) => {
 
   // Fill phone and send (may fail — but back button appears regardless on step === "otp")
   await page.locator('input[type="tel"]').first().fill('9876543210');
-  await page.locator('button').filter({ hasText: /send otp|send/i }).first().click();
+  await page.locator('button').filter({ hasText: /continue|send otp|send/i }).first().click();
 
   // Wait briefly
   await page.waitForTimeout(2_000);
@@ -145,10 +145,10 @@ test('3.7 admin login link is visible on chef-login page', async ({ page }) => {
 
 // ─── 3.8 Page renders correct heading ────────────────────────────────────────
 
-test('3.8 chef-login page shows Kitchen Login heading', async ({ page }) => {
+test('3.8 chef-login page shows Staff Portal heading', async ({ page }) => {
   await gotoChefLogin(page);
 
   await expect(
-    page.locator('h1').filter({ hasText: /kitchen login|chef|kds/i }).first()
+    page.locator('h1').filter({ hasText: /staff portal|kitchen login|chef|kds/i }).first()
   ).toBeVisible({ timeout: 10_000 });
 });

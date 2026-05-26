@@ -27,7 +27,7 @@ export default async function StaffLayout({
     const userRole = role as "chef" | "waiter";
 
     return (
-      <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg, #FFF8F3)" }}>
+      <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg, var(--bg))" }}>
         <div className="hidden lg:block">
           <WaiterSidebar userName={userName} userRole={userRole} />
         </div>

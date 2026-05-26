@@ -154,7 +154,7 @@ function OrderTrackerInner({
           <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-.005em", color: "#fff" }}>{order.order_number}</span>
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.1)", padding: "5px 10px 5px 7px", borderRadius: 999, fontSize: 10, fontWeight: 800, color: socketStatus === "connected" ? "#FF8A5E" : "rgba(255,255,255,.4)", letterSpacing: ".04em" }}>
-          <span className="trk-pulse-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: socketStatus === "connected" ? "#E03A30" : "rgba(255,255,255,.3)", display: "inline-block" }} />
+          <span className="trk-pulse-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: socketStatus === "connected" ? "var(--red)" : "rgba(255,255,255,.3)", display: "inline-block" }} />
           {socketStatus === "connected" ? "LIVE" : "POLL"}
         </div>
       </div>
@@ -272,7 +272,7 @@ function OrderTrackerInner({
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             style={{ margin: "0 16px 14px", borderRadius: "var(--r-3)", background: "var(--surface)", border: "1px solid var(--hairline)", padding: 16, display: "flex", gap: 14, alignItems: "center", boxShadow: "var(--sh-2)" }}
           >
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: "linear-gradient(135deg, #FFB838, #FF4D3D)", display: "grid", placeItems: "center", color: "#fff", flexShrink: 0, boxShadow: "0 8px 20px -4px rgba(255,77,61,.4)" }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: "linear-gradient(135deg, #FFB838, var(--brand))", display: "grid", placeItems: "center", color: "#fff", flexShrink: 0, boxShadow: "0 8px 20px -4px rgba(255,77,61,.4)" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 12h4M9 10v4M14 13h.01M16 11h.01" /><path d="M17 18a4 4 0 0 0 4-4 8 8 0 0 0-16 0 4 4 0 0 0 4 4 6 6 0 0 0 4-1 6 6 0 0 0 4 1Z" /></svg>
             </div>
             <div style={{ flex: 1 }}>

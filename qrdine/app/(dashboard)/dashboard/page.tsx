@@ -54,7 +54,7 @@ const TABLE_DOT_CLASS: Record<string, string> = {
   occupied:  "busy",
   reserved:  "alert",
 };
-const TABLE_DOT_LABEL: Record<string, string> = {
+const _TABLE_DOT_LABEL: Record<string, string> = {
   available: "Free",
   occupied:  "Busy",
   reserved:  "Reserved",
@@ -179,8 +179,8 @@ async function getStats(restaurantId: string) {
     totalSC > 0
       ? [
           { lbl: "New",    val: Math.round((newCount    / totalSC) * 100), color: "#2E6EF7" },
-          { lbl: "Active", val: Math.round((activeCount / totalSC) * 100), color: "#F2A500" },
-          { lbl: "Served", val: Math.round((doneCount   / totalSC) * 100), color: "#1E9E5E" },
+          { lbl: "Active", val: Math.round((activeCount / totalSC) * 100), color: "var(--amber)" },
+          { lbl: "Served", val: Math.round((doneCount   / totalSC) * 100), color: "var(--green)" },
         ]
       : [{ lbl: "No orders", val: 100, color: "#F2EEE8" }];
 
@@ -353,7 +353,7 @@ export default async function DashboardPage() {
           <button
             className="new-order-btn"
             style={{
-              background: "linear-gradient(135deg, #FF4D3D 0%, #FF6B4A 100%)",
+              background: "linear-gradient(135deg, var(--brand) 0%, #FF6B4A 100%)",
               color: "#fff",
               border: 0,
               padding: "10px 22px 10px 16px",
@@ -498,8 +498,8 @@ export default async function DashboardPage() {
                   <svg viewBox={`0 0 ${W} ${H + 20}`} width="100%" height="100%" overflow="visible" style={{ display: "block" }}>
                     <defs>
                       <linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%"   stopColor="#FF4D3D" stopOpacity="0.18" />
-                        <stop offset="100%" stopColor="#FF4D3D" stopOpacity="0"    />
+                        <stop offset="0%"   stopColor="var(--brand)" stopOpacity="0.18" />
+                        <stop offset="100%" stopColor="var(--brand)" stopOpacity="0"    />
                       </linearGradient>
                     </defs>
                     {/* Grid lines */}
@@ -513,7 +513,7 @@ export default async function DashboardPage() {
                     <line x1={P} x2={W - P} y1={H - P} y2={H - P} stroke="rgba(20,19,26,0.08)" />
                     {/* Area fill + smooth line */}
                     <path d={areaD} fill="url(#areaGrad)" />
-                    <path d={lineD} fill="none" stroke="#FF4D3D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d={lineD} fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     {/* X-axis hour labels */}
                     {xLabels.map(({ h, x }) => (
                       <text key={h} x={x} y={H + 14} textAnchor="middle"
@@ -524,10 +524,10 @@ export default async function DashboardPage() {
                     {/* Peak dot + tooltip — only when revenue exists */}
                     {peakRevenue > 0 && (
                       <>
-                        <circle cx={tipCoord.x} cy={tipCoord.y} r="5" fill="#FF4D3D" />
-                        <circle cx={tipCoord.x} cy={tipCoord.y} r="9" fill="none" stroke="#FF4D3D" strokeOpacity="0.25" />
+                        <circle cx={tipCoord.x} cy={tipCoord.y} r="5" fill="var(--brand)" />
+                        <circle cx={tipCoord.x} cy={tipCoord.y} r="9" fill="none" stroke="var(--brand)" strokeOpacity="0.25" />
                         <g transform={`translate(${tipX - 38},${tipY - 40})`}>
-                          <rect x="0" y="0" width="76" height="28" rx="7" fill="#14131A" />
+                          <rect x="0" y="0" width="76" height="28" rx="7" fill="var(--ink)" />
                           <text x="38" y="11" textAnchor="middle" fill="rgba(255,255,255,.6)" fontSize="8.5" fontWeight="600" fontFamily="Plus Jakarta Sans">{peakLabel}</text>
                           <text x="38" y="22" textAnchor="middle" fill="#FF9385" fontSize="10" fontWeight="800" fontFamily="Plus Jakarta Sans">₹{Math.round(peakRevenue).toLocaleString("en-IN")}</text>
                         </g>
@@ -548,7 +548,7 @@ export default async function DashboardPage() {
                   </div>
                 ))}
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 3, background: "#FF4D3D", display: "inline-block" }} />
+                  <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--brand)", display: "inline-block" }} />
                   <span style={{ font: "600 12px var(--sans)" }}>Today</span>
                 </div>
               </div>
@@ -700,8 +700,8 @@ export default async function DashboardPage() {
                 ) : (
                   [
                     { lbl: "New",    count: newCount,    color: "#2E6EF7" },
-                    { lbl: "Active", count: activeCount, color: "#F2A500" },
-                    { lbl: "Served", count: doneCount,   color: "#1E9E5E" },
+                    { lbl: "Active", count: activeCount, color: "var(--amber)" },
+                    { lbl: "Served", count: doneCount,   color: "var(--green)" },
                   ].map((d) => (
                     <div key={d.lbl} className="legend__row">
                       <span className="sw" style={{ background: d.color }} />
@@ -723,7 +723,7 @@ export default async function DashboardPage() {
               </div>
               {topSellers.length === 0 ? (
                 <div style={{ padding: "24px 0", textAlign: "center" }}>
-                  <div style={{ fontSize: 28, marginBottom: 6 }}>🍽️</div>
+                  <div style={{ fontSize: 28, marginBottom: 6 }}>️</div>
                   <p style={{ margin: 0, font: "600 13px var(--sans)", color: "var(--muted)" }}>No orders yet</p>
                   <p style={{ margin: "4px 0 0", font: "500 11px var(--sans)", color: "var(--muted-2)" }}>
                     Top items appear once customers order

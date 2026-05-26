@@ -229,7 +229,7 @@ function MenuManagerInner({ restaurantId }: Props) {
               fontFamily: "var(--sans)",
             }}
           >
-            <span style={{ fontSize: 16 }}>👈</span>
+            <span style={{ fontSize: 16 }}></span>
             Please select a category from the left panel before adding an item.
           </div>
         </div>
@@ -261,7 +261,7 @@ function MenuManagerInner({ restaurantId }: Props) {
       )}
       {pendingDelete && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 max-w-xs w-full border border-zinc-200 shadow-xl space-y-4 text-xs">
+          <div className="bg-white rounded-2xl p-6 max-w-xs w-full border border-zinc-200 [box-shadow:var(--sh-3)] space-y-4 text-xs">
             <h4 className="text-sm font-extrabold text-zinc-950">Delete item?</h4>
             <p className="text-zinc-500">
               <span className="font-bold text-zinc-800">&ldquo;{pendingDelete.name}&rdquo;</span> will be permanently removed from the menu.

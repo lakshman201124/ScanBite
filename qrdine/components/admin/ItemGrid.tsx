@@ -6,10 +6,10 @@ import type { MenuItem } from "@/types";
 
 // Left-border accent color per food type
 const FOOD_TYPE_META: Record<string, { border: string; dotBg: string; dotBorder: string; label: string }> = {
-  veg:     { border: "#1E9E5E", dotBg: "#1E9E5E", dotBorder: "#1E9E5E", label: "Veg" },
+  veg:     { border: "var(--green)", dotBg: "var(--green)", dotBorder: "var(--green)", label: "Veg" },
   non_veg: { border: "#C8462F", dotBg: "#C8462F", dotBorder: "#C8462F", label: "Non-veg" },
   egg:     { border: "#E0A82E", dotBg: "#E0A82E", dotBorder: "#E0A82E", label: "Egg" },
-  vegan:   { border: "#1E9E5E", dotBg: "transparent", dotBorder: "#1E9E5E", label: "Vegan" },
+  vegan:   { border: "var(--green)", dotBg: "transparent", dotBorder: "var(--green)", label: "Vegan" },
 };
 
 interface Props {

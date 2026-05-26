@@ -12,7 +12,7 @@ type Role = "chef" | "waiter";
 type Step = "phone" | "otp" | "signup" | "pin" | "success";
 
 const ROLE_CFG: Record<Role, { label: string; desc: string; icon: React.ReactNode; accent: string }> = {
-  chef:   { label: "Chef",   desc: "Kitchen & order preparation",  icon: <ChefHat size={18} />,         accent: "#FF4D3D" },
+  chef:   { label: "Chef",   desc: "Kitchen & order preparation",  icon: <ChefHat size={18} />,         accent: "var(--brand)" },
   waiter: { label: "Waiter", desc: "Table service & order taking",  icon: <UtensilsCrossed size={18} />, accent: "#2E6EF7" },
 };
 
@@ -211,7 +211,7 @@ export default function StaffLoginPage() {
           {/* Header */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF4D3D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 7h2V5h2v2h2"/><path d="M14 7h2V5h2v2h2"/><path d="M4 12h16"/>
                 <path d="M6 12v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-6"/>
               </svg>
@@ -292,7 +292,7 @@ export default function StaffLoginPage() {
                       return (
                         <button key={r} type="button" onClick={() => setRole(r)}
                           style={{ borderColor: active ? cfg.accent : undefined, background: active ? cfg.accent + "18" : undefined }}
-                          className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all ${active ? "border-current" : "border-zinc-700 hover:border-zinc-500"}`}>
+                          className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-[transform,opacity] ${active ? "border-current" : "border-zinc-700 hover:border-zinc-500"}`}>
                           <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                             style={{ background: active ? cfg.accent + "30" : "#27272a", color: active ? cfg.accent : "#71717a" }}>
                             {cfg.icon}

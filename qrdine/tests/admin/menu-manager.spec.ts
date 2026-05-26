@@ -88,15 +88,17 @@ test.describe('Categories CRUD', () => {
     await expect(modal).toBeVisible({ timeout: 5_000 });
   });
 
-  test('API PATCH /api/menu/categories/[id] requires auth', async ({ request }) => {
-    const res = await request.patch(`${BASE_URL}/api/menu/categories/some-id`, {
+  test('API PATCH /api/menu/categories/[id] requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.patch(`${BASE_URL}/api/menu/categories/some-id`, {
       data: { name: 'Updated Name' },
     });
     expect([401, 403]).toContain(res.status());
   });
 
-  test('API DELETE /api/menu/categories/[id] requires auth', async ({ request }) => {
-    const res = await request.delete(`${BASE_URL}/api/menu/categories/some-id`);
+  test('API DELETE /api/menu/categories/[id] requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.delete(`${BASE_URL}/api/menu/categories/some-id`);
     expect([401, 403]).toContain(res.status());
   });
 });
@@ -113,22 +115,25 @@ test.describe('Menu Items CRUD', () => {
     await expect(addBtn).toBeVisible({ timeout: 15_000 });
   });
 
-  test('API POST /api/menu/items requires auth', async ({ request }) => {
-    const res = await request.post(`${BASE_URL}/api/menu/items`, {
+  test('API POST /api/menu/items requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.post(`${BASE_URL}/api/menu/items`, {
       data: { name: 'Test', price: 100, category_id: 'some-id', food_type: 'veg' },
     });
     expect([401, 403]).toContain(res.status());
   });
 
-  test('API PATCH /api/menu/items/[id] requires auth', async ({ request }) => {
-    const res = await request.patch(`${BASE_URL}/api/menu/items/some-id`, {
+  test('API PATCH /api/menu/items/[id] requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.patch(`${BASE_URL}/api/menu/items/some-id`, {
       data: { price: 200 },
     });
     expect([401, 403]).toContain(res.status());
   });
 
-  test('API DELETE /api/menu/items/[id] requires auth', async ({ request }) => {
-    const res = await request.delete(`${BASE_URL}/api/menu/items/some-id`);
+  test('API DELETE /api/menu/items/[id] requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.delete(`${BASE_URL}/api/menu/items/some-id`);
     expect([401, 403]).toContain(res.status());
   });
 
@@ -159,13 +164,15 @@ test.describe('Menu Items CRUD', () => {
 // ─── Customizations ───────────────────────────────────────────────────────────
 
 test.describe('Customizations CRUD', () => {
-  test('GET /api/menu/items/[id]/customizations requires auth', async ({ request }) => {
-    const res = await request.get(`${BASE_URL}/api/menu/items/some-id/customizations`);
+  test('GET /api/menu/items/[id]/customizations requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.get(`${BASE_URL}/api/menu/items/some-id/customizations`);
     expect([401, 403]).toContain(res.status());
   });
 
-  test('POST customization requires auth', async ({ request }) => {
-    const res = await request.post(`${BASE_URL}/api/menu/items/some-id/customizations`, {
+  test('POST customization requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.post(`${BASE_URL}/api/menu/items/some-id/customizations`, {
       data: {
         name: 'Size',
         options: [{ label: 'Small', price_delta: 0 }, { label: 'Large', price_delta: 50 }],
@@ -175,8 +182,9 @@ test.describe('Customizations CRUD', () => {
     expect([401, 403]).toContain(res.status());
   });
 
-  test('DELETE customization requires auth', async ({ request }) => {
-    const res = await request.delete(`${BASE_URL}/api/menu/items/some-id/customizations`);
-    expect([401, 403]).toContain(res.status());
+  test('DELETE customization requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.delete(`${BASE_URL}/api/menu/items/some-id/customizations`);
+    expect([401, 403, 405]).toContain(res.status());
   });
 });

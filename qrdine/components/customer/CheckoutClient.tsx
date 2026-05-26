@@ -52,7 +52,7 @@ function CheckoutInner({ restaurantSlug }: Props) {
   if (items.length === 0) {
     return (
       <div className="customer-scope" style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
-        <div style={{ fontSize: 56 }}>🛒</div>
+        <div style={{ fontSize: 56 }}></div>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "var(--ink)" }}>Your bag is empty</h2>
         <button onClick={() => router.back()} style={{ padding: "10px 24px", borderRadius: 999, background: "var(--brand)", color: "#fff", border: 0, fontWeight: 700, cursor: "pointer", fontFamily: "var(--sans)" }}>
           Browse menu

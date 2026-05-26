@@ -33,7 +33,7 @@ export default function OnboardingWizard() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [pinCode, setPinCode] = useState("");
-  const [brandColor, setBrandColor] = useState("#FF4D3D");
+  const [brandColor, setBrandColor] = useState("var(--brand)");
   const [logoUrl, setLogoUrl] = useState("");
   const [tagline, setTagline] = useState("");
   
@@ -88,7 +88,7 @@ export default function OnboardingWizard() {
     setMenuItems(menuItems.filter((_, idx) => idx !== index));
   };
 
-  const handleItemChange = (index: number, field: string, value: any) => {
+  const handleItemChange = (index: number, field: string, value: string | number) => {
     const updated = [...menuItems];
     updated[index] = { ...updated[index], [field]: value };
     setMenuItems(updated);
@@ -102,7 +102,7 @@ export default function OnboardingWizard() {
     setTables(tables.filter((_, idx) => idx !== index));
   };
 
-  const handleTableChange = (index: number, field: string, value: any) => {
+  const handleTableChange = (index: number, field: string, value: string | number) => {
     const updated = [...tables];
     updated[index] = { ...updated[index], [field]: value };
     setTables(updated);
@@ -158,26 +158,25 @@ export default function OnboardingWizard() {
       }
 
       router.push("/dashboard");
-    } catch (err: any) {
-      alert(err.message || "An error occurred.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "An error occurred.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const SPRING = { type: "spring" as const, stiffness: 350, damping: 30 };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 flex items-center justify-center p-4 sm:p-6 md:p-8 font-sans">
-      <div className="w-full max-w-5xl bg-white border border-zinc-200 rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-xl min-h-[640px]">
+      <div className="w-full max-w-5xl bg-white border border-zinc-200 rounded-3xl overflow-hidden flex flex-col md:flex-row [box-shadow:var(--sh-3)] min-h-[640px]">
         
         {/* Left Side: Smooth Glassmorphic Wizard Steps Navigation */}
-        <div className="w-full md:w-80 bg-gradient-to-br from-[#14131A] to-[#2A2933] text-white p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden shrink-0 border-r border-zinc-800">
+        <div className="w-full md:w-80 bg-gradient-to-br from-[var(--ink)] to-[#2A2933] text-white p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden shrink-0 border-r border-zinc-800">
           <div className="absolute right-[-30px] top-[-30px] w-36 h-36 rounded-full bg-radial-gradient(circle, rgba(255,77,61,0.2) 0%, transparent 70%) pointer-events-none" />
           
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-6">
-              <span className="w-6 h-6 rounded bg-[#FF4D3D] text-white flex items-center justify-center text-xs font-bold">S</span>
+              <span className="w-6 h-6 rounded bg-[var(--brand)] text-white flex items-center justify-center text-xs font-bold">S</span>
               <span className="font-bold tracking-tight text-sm">ScanBite Setup Wizard</span>
             </div>
             
@@ -186,11 +185,10 @@ export default function OnboardingWizard() {
                 const num = idx + 1;
                 const active = step === num;
                 const done = step > num;
-                const Icon = s.icon;
                 return (
                   <div key={num} className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold border transition-colors ${
-                      active ? "bg-[#FF4D3D] border-[#FF4D3D] text-white" : done ? "bg-zinc-800 border-zinc-700 text-[#FF9385]" : "border-zinc-700 text-zinc-500"
+                      active ? "bg-[var(--brand)] border-[var(--brand)] text-white" : done ? "bg-zinc-800 border-zinc-700 text-[#FF9385]" : "border-zinc-700 text-zinc-500"
                     }`}>
                       {num}
                     </div>
@@ -224,7 +222,7 @@ export default function OnboardingWizard() {
                 <div className="space-y-5">
                   <div>
                     <h3 className="text-xl font-bold text-zinc-950 font-[var(--sans)]">Restaurant Details</h3>
-                    <p className="text-xs text-zinc-400 mt-1">Let's collect primary business contact parameters.</p>
+                    <p className="text-xs text-zinc-400 mt-1">Let&apos;s collect primary business contact parameters.</p>
                   </div>
                   <hr className="border-zinc-150" />
 
@@ -391,8 +389,8 @@ export default function OnboardingWizard() {
                     {/* Starter */}
                     <div 
                       onClick={() => setPlan("starter")}
-                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-all ${
-                        plan === "starter" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 shadow-sm" : "border-zinc-200 hover:border-zinc-300"
+                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-[transform,opacity] ${
+                        plan === "starter" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 [box-shadow:var(--sh-1)]" : "border-zinc-200 hover:border-zinc-300"
                       }`}
                     >
                       <div className="space-y-2">
@@ -408,12 +406,12 @@ export default function OnboardingWizard() {
                     {/* Growth */}
                     <div 
                       onClick={() => setPlan("growth")}
-                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-all ${
-                        plan === "growth" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 shadow-sm" : "border-zinc-200 hover:border-zinc-300"
+                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-[transform,opacity] ${
+                        plan === "growth" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 [box-shadow:var(--sh-1)]" : "border-zinc-200 hover:border-zinc-300"
                       }`}
                     >
                       <div className="space-y-2">
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#FF4D3D]">Growth</span>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--brand)]">Growth</span>
                         <h4 className="text-xl font-extrabold text-zinc-950">₹999<span className="text-[9px] font-medium text-zinc-500">/mo</span></h4>
                         <ul className="text-[10px] text-zinc-500 space-y-1">
                           <li>• Max 20 Tables</li>
@@ -425,12 +423,12 @@ export default function OnboardingWizard() {
                     {/* Pro */}
                     <div 
                       onClick={() => setPlan("pro")}
-                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-all ${
-                        plan === "pro" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 shadow-sm" : "border-zinc-200 hover:border-zinc-300"
+                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-[transform,opacity] ${
+                        plan === "pro" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 [box-shadow:var(--sh-1)]" : "border-zinc-200 hover:border-zinc-300"
                       }`}
                     >
                       <div className="space-y-2">
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-violet-600">Enterprise Pro</span>
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--brand)]">Enterprise Pro</span>
                         <h4 className="text-xl font-extrabold text-zinc-950">₹2,499<span className="text-[9px] font-medium text-zinc-500">/mo</span></h4>
                         <ul className="text-[10px] text-zinc-500 space-y-1">
                           <li>• Unlimited Seating</li>
@@ -448,7 +446,7 @@ export default function OnboardingWizard() {
                   <div className="flex justify-between items-center gap-4">
                     <div>
                       <h3 className="text-xl font-bold text-zinc-950 font-[var(--sans)]">First Digital Menu Items</h3>
-                      <p className="text-xs text-zinc-400 mt-1">Let's create a primary category and populate three high-selling dishes.</p>
+                      <p className="text-xs text-zinc-400 mt-1">Let&apos;s create a primary category and populate three high-selling dishes.</p>
                     </div>
                     <button 
                       type="button" 
@@ -629,7 +627,7 @@ export default function OnboardingWizard() {
               {/* Step 8: Go Live */}
               {step === 8 && (
                 <div className="text-center py-4 space-y-4 max-w-md mx-auto flex flex-col items-center">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-[#FF4D3D] to-[#FF7A4D] text-white rounded-3xl flex items-center justify-center shadow-lg shadow-orange-500/25">
+                  <div className="w-14 h-14 bg-gradient-to-tr from-[var(--brand)] to-[#FF7A4D] text-white rounded-3xl flex items-center justify-center [box-shadow:var(--sh-3)] shadow-orange-500/25">
                     <CheckCircle2 className="w-7 h-7" />
                   </div>
                   <div>
@@ -665,7 +663,7 @@ export default function OnboardingWizard() {
             <button 
               onClick={handleBack} 
               disabled={step === 1 || submitting}
-              className="px-4 py-2.5 rounded-2xl border border-zinc-200 text-zinc-600 font-bold hover:bg-zinc-50 disabled:opacity-0 disabled:pointer-events-none transition-all flex items-center gap-1.5 text-xs bg-white"
+              className="px-4 py-2.5 rounded-2xl border border-zinc-200 text-zinc-600 font-bold hover:bg-zinc-50 disabled:opacity-0 disabled:pointer-events-none transition-[transform,opacity] flex items-center gap-1.5 text-xs bg-white"
             >
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
@@ -673,7 +671,7 @@ export default function OnboardingWizard() {
               <button 
                 onClick={handleNext} 
                 disabled={!validateStep()}
-                className="px-5 py-2.5 rounded-2xl bg-zinc-950 text-white font-bold hover:bg-zinc-800 transition-all flex items-center gap-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className="px-5 py-2.5 rounded-2xl bg-zinc-950 text-white font-bold hover:bg-zinc-800 transition-[transform,opacity] flex items-center gap-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed [box-shadow:var(--sh-1)]"
               >
                 Continue <ArrowRight className="w-4 h-4" />
               </button>
@@ -681,7 +679,7 @@ export default function OnboardingWizard() {
               <button 
                 onClick={handleFinish} 
                 disabled={submitting}
-                className="px-6 py-3 rounded-2xl bg-[#FF4D3D] text-white font-bold hover:bg-orange-600 transition-all text-xs disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-orange-500/20"
+                className="px-6 py-3 rounded-2xl bg-[var(--brand)] text-white font-bold hover:bg-orange-600 transition-[transform,opacity] text-xs disabled:opacity-50 flex items-center gap-2 [box-shadow:var(--sh-3)] shadow-orange-500/20"
               >
                 {submitting ? (
                   <>

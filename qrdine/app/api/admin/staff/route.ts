@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { success, error, unauthorized } from "@/lib/api-response";
 import { z } from "zod";
 import { UserRole } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const phoneSchema = z.string().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number");
 

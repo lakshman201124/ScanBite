@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Search, Plus, Download, CalendarDays, Filter, List, LayoutGrid,
+  Search, Plus, Download, CalendarDays, List, LayoutGrid,
   Phone, Mail, FileText, Printer, ChevronRight, ChevronLeft, ChevronDown,
   Check, X, Clock, UtensilsCrossed,
 } from "lucide-react";
@@ -362,7 +362,7 @@ function printBill(order: LiveOrder) {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
-function OrderDetail({ order, onClose }: { order: LiveOrder; onClose: () => void }) {
+function OrderDetail({ order, onClose: _onClose }: { order: LiveOrder; onClose: () => void }) {
   const subtotal = order.items.reduce((s, i) => s + i.price * i.quantity, 0);
   const gst      = Math.round(subtotal * 0.05);
   const service  = Math.round(subtotal * 0.08);

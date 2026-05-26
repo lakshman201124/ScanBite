@@ -375,7 +375,7 @@ export function BillsList({ restaurantId }: Props) {
       ) : bills.length === 0 ? (
         <div style={{ padding: "60px 0", textAlign: "center" }}>
           <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--surface-2)", display: "grid", placeItems: "center", margin: "0 auto 14px", fontSize: 24 }}>
-            🧾
+            
           </div>
           <p style={{ margin: 0, font: "700 14px var(--sans)", color: "var(--ink)" }}>No bills found</p>
           <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--muted)", font: "500 12px var(--sans)" }}>

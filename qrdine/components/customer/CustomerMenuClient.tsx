@@ -582,7 +582,7 @@ function CustomerMenuInner({
           <div className="cust-cats">
             {filterItems.map((item) => {
               const active = filter === item.id;
-              const emojis: Record<string, string> = { all: "✨", veg: "🥗", non_veg: "🍖", featured: "⭐" };
+              const emojis: Record<string, string> = { all: "", veg: "", non_veg: "", featured: "⭐" };
               return (
                 <button
                   key={item.id}
@@ -732,7 +732,7 @@ function CustomerMenuInner({
                       <div className="food-card__title line-clamp-2">{item.name}</div>
                       <div className="food-card__meta">
                         <span className={`veg-dot${item.food_type === "non_veg" ? " nonveg" : ""}`} />
-                        <Star size={11} fill="#F2A500" stroke="none" />
+                        <Star size={11} fill="var(--amber)" stroke="none" />
                         <b style={{ color: "var(--ink)", fontWeight: 700 }}>4.8</b>
                         <span>·</span>
                         {item.prep_time_minutes ? (

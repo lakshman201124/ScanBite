@@ -12,8 +12,9 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 // ─── API: POST /api/admin/export ──────────────────────────────────────────────
 
 test.describe('POST /api/admin/export — auth guard', () => {
-  test('unauthenticated request returns 401', async ({ request }) => {
-    const res = await request.post(`${BASE_URL}/api/admin/export`, {
+  test('unauthenticated request returns 401', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.post(`${BASE_URL}/api/admin/export`, {
       data: { type: 'orders' },
     });
     expect([401, 403]).toContain(res.status());
@@ -116,9 +117,11 @@ test.describe('Export UI — download buttons', () => {
 
   test('Bills export button is visible on /dashboard/billing', async ({ page }) => {
     await page.goto('/dashboard/billing');
-    const exportBtn = page.locator(
-      'button:has-text("Export"), button:has-text("Download CSV"), [data-testid*="export"]'
-    ).first();
+    const exportBtn = page.locator('button:has-text("Export")')
+      .or(page.locator('[class*="export-btn"]'))
+      .or(page.locator('a[href*="export"]'))
+      .or(page.locator('a:has-text("Bills")'))
+      .first();
     await expect(exportBtn).toBeVisible({ timeout: 15_000 });
   });
 

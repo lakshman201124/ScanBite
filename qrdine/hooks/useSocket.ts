@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { connectSocket, disconnectSocket, getSocket } from "@/lib/socket";
+import { connectSocket, disconnectSocket } from "@/lib/socket";
 import type { Socket } from "socket.io-client";
 
 export type SocketStatus = "connected" | "connecting" | "disconnected" | "offline";
@@ -11,6 +11,7 @@ export function useSocket(auth: Record<string, unknown> | null): {
   status: SocketStatus;
 } {
   const [status, setStatus] = useState<SocketStatus>("disconnected");
+  const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export function useSocket(auth: Record<string, unknown> | null): {
 
     const s = connectSocket(auth);
     socketRef.current = s;
+    setSocket(s);
     setStatus(s.connected ? "connected" : "connecting");
 
     function onConnect()          { setStatus("connected"); }
@@ -38,6 +40,7 @@ export function useSocket(auth: Record<string, unknown> | null): {
       s.off("connect_error",      onConnectError);
       s.io.off("reconnect_attempt", onReconnectAttempt);
       s.io.off("reconnect_failed",  onReconnectFailed);
+      setSocket(null);
     };
   }, [JSON.stringify(auth)]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -46,5 +49,5 @@ export function useSocket(auth: Record<string, unknown> | null): {
     return () => { disconnectSocket(); };
   }, []);
 
-  return { socket: socketRef.current ?? (auth ? getSocket() : null), status };
+  return { socket, status };
 }

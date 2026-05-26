@@ -4,14 +4,14 @@
    ============================================================ */
 :root {
   /* Brand */
-  --brand:        #FF4D3D;            /* signature coral */
+  --brand:        var(--brand);            /* signature coral */
   --brand-deep:   #E63B2C;
   --brand-soft:   #FFE8E4;
   --brand-tint:   #FFF1EE;
   --accent:       var(--brand);
 
   /* Ink */
-  --ink:          #14131A;
+  --ink:          var(--ink);
   --ink-2:        #2A2933;
   --muted:        #6B6A75;
   --muted-2:      #9A99A4;
@@ -19,17 +19,17 @@
   --hairline-2:   rgba(20,19,26,0.04);
 
   /* Surface */
-  --bg:           #FFF8F3;            /* warm cream */
+  --bg:           var(--bg);            /* warm cream */
   --bg-2:         #FFFCF8;
-  --surface:      #FFFFFF;
+  --surface:      var(--surface);
   --surface-2:    #F6F2EC;
 
   /* Semantic */
-  --green:        #1E9E5E;
+  --green:        var(--green);
   --green-soft:   #E2F5EC;
-  --amber:        #F2A500;
+  --amber:        var(--amber);
   --amber-soft:   #FFF4DC;
-  --red:          #E03A30;
+  --red:          var(--red);
   --blue:         #2E6EF7;
 
   /* Shadow */
@@ -644,7 +644,7 @@ body {
 }
 .trk-live .dot {
   width: 7px; height: 7px; border-radius: 50%;
-  background: #E03A30;
+  background: var(--red);
   animation: trk-blink 1.1s ease-in-out infinite;
 }
 @keyframes trk-blink {
@@ -768,7 +768,7 @@ body {
   font: 700 10px var(--sans); letter-spacing: .04em;
   color: var(--night);
 }
-.trk-pace .ico { color: #1E9E5E; display: inline-flex; }
+.trk-pace .ico { color: var(--green); display: inline-flex; }
 
 /* Floating food on ring */
 .trk-orbit {
@@ -811,7 +811,7 @@ body {
 .trk-chef__avatar::after {
   content:''; position:absolute; right:-2px; bottom:-2px;
   width: 14px; height: 14px; border-radius: 50%;
-  background: #1E9E5E;
+  background: var(--green);
   border: 2px solid #fff;
   animation: trk-pulse 1.6s ease-in-out infinite;
 }
@@ -930,8 +930,8 @@ body {
   box-shadow: 0 0 0 1px var(--hairline);
 }
 .trk-stop.is-done .trk-stop__bullet {
-  background: #1E9E5E; color: #fff;
-  box-shadow: 0 0 0 1px #1E9E5E;
+  background: var(--green); color: #fff;
+  box-shadow: 0 0 0 1px var(--green);
 }
 .trk-stop.is-now .trk-stop__bullet {
   background: var(--sun); color: var(--night);
@@ -1055,8 +1055,8 @@ body {
   width: 20px; height: 20px;
   border-radius: 50%;
   background: #fff;
-  border: 2px solid #1E9E5E;
-  color: #1E9E5E;
+  border: 2px solid var(--green);
+  color: var(--green);
   display: grid; place-items: center;
 }
 .trk-dish__status.cooking {
@@ -1962,8 +1962,8 @@ body {
   width: 6px; height: 6px; border-radius: 50%;
 }
 .ord-tab__pip.blue  { background: #2E6EF7; }
-.ord-tab__pip.amber { background: #F2A500; }
-.ord-tab__pip.green { background: #1E9E5E; }
+.ord-tab__pip.amber { background: var(--amber); }
+.ord-tab__pip.green { background: var(--green); }
 .ord-tab__pip.coral { background: var(--brand); }
 .ord-tab__pip.red   { background: var(--red); }
 .ord-tab__cnt {
@@ -2096,9 +2096,9 @@ body {
 .status-pill.new      { background: rgba(46,110,247,.10); color: #2E6EF7; }
 .status-pill.new .dot { background: #2E6EF7; }
 .status-pill.preparing      { background: rgba(242,165,0,.12); color: #9a6000; }
-.status-pill.preparing .dot { background: #F2A500; }
-.status-pill.ready      { background: rgba(30,158,94,.10); color: #1E9E5E; }
-.status-pill.ready .dot { background: #1E9E5E; }
+.status-pill.preparing .dot { background: var(--amber); }
+.status-pill.ready      { background: rgba(30,158,94,.10); color: var(--green); }
+.status-pill.ready .dot { background: var(--green); }
 .status-pill.served      { background: rgba(255,77,61,.10); color: var(--brand); }
 .status-pill.served .dot { background: var(--brand); }
 .status-pill.cancel      { background: rgba(224,58,48,.09); color: var(--red); }
@@ -2106,9 +2106,9 @@ body {
 .status-pill.pending      { background: rgba(46,110,247,.10); color: #2E6EF7; }
 .status-pill.pending .dot { background: #2E6EF7; }
 .status-pill.confirmed      { background: rgba(242,165,0,.12); color: #9a6000; }
-.status-pill.confirmed .dot { background: #F2A500; }
-.status-pill.completed      { background: rgba(30,158,94,.10); color: #1E9E5E; }
-.status-pill.completed .dot { background: #1E9E5E; }
+.status-pill.confirmed .dot { background: var(--amber); }
+.status-pill.completed      { background: rgba(30,158,94,.10); color: var(--green); }
+.status-pill.completed .dot { background: var(--green); }
 .status-pill.cancelled      { background: rgba(224,58,48,.09); color: var(--red); }
 .status-pill.cancelled .dot { background: var(--red); }
 

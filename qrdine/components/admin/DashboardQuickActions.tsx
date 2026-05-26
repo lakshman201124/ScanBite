@@ -20,7 +20,7 @@ const ACTIONS: ActionDef[] = [
     label: "New order",
     desc: "Take manual order",
     path: "/dashboard/orders/new",
-    gradient: "linear-gradient(135deg, #FF4D3D 0%, #FF6B4A 100%)",
+    gradient: "linear-gradient(135deg, var(--brand) 0%, #FF6B4A 100%)",
     iconBg: "rgba(255,255,255,.18)",
     shadow: "0 8px 24px -8px rgba(255,77,61,.55), 0 2px 8px -2px rgba(255,77,61,.30)",
     color: "#fff",
@@ -36,7 +36,7 @@ const ACTIONS: ActionDef[] = [
     label: "Kitchen",
     desc: "Open KDS display",
     path: "/kds",
-    gradient: "linear-gradient(135deg, #14131A 0%, #2A2933 100%)",
+    gradient: "linear-gradient(135deg, var(--ink) 0%, #2A2933 100%)",
     iconBg: "rgba(255,255,255,.10)",
     shadow: "0 6px 18px -6px rgba(20,19,26,.45)",
     color: "#fff",
@@ -55,7 +55,7 @@ const ACTIONS: ActionDef[] = [
     iconBg: "rgba(30,158,94,.18)",
     shadow: "0 4px 14px -6px rgba(30,158,94,.28)",
     color: "#1E7A4A",
-    iconColor: "#1E9E5E",
+    iconColor: "var(--green)",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 9h16l-1 4H5z"/><path d="M6 13v7M18 13v7"/>

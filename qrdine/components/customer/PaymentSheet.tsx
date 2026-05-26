@@ -64,7 +64,7 @@ export function PaymentSheet({ orderId, orderNumber, totalAmount, restaurantSlug
           name: restaurant_name,
           description: `Order ${orderNum}`,
           order_id: razorpay_order_id,
-          theme: { color: brand_color ?? "#FF4D3D" },
+          theme: { color: brand_color ?? "var(--brand)" },
           handler: async (response: Record<string, string>) => {
             try {
               const verifyRes = await fetch("/api/payments/verify", {

@@ -121,7 +121,7 @@ test.describe('Staff management UI', () => {
 test.describe('Deactivated staff login rejection', () => {
   test('deactivated chef returns 401 on /api/auth/chef-login', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-      data: { phone: '+910000000000', code: '000000' },
+      data: { phone: '+910000000000', pin: '000000' },
     });
     expect([401, 404]).toContain(res.status());
   });

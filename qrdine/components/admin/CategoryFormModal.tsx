@@ -53,6 +53,7 @@ export function CategoryFormModal({ category, onClose, onSaved }: Props) {
           <label style={{ display: "block", marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-2)", letterSpacing: ".02em" }}>Name *</span>
             <input
+              name="name"
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Starters, Main Course, Beverages"

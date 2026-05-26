@@ -1,4 +1,3 @@
-import { PlanType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { PLAN_LIMITS } from "./plans";

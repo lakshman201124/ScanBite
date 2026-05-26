@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { createCustomerSession } from "@/lib/session";
 import { error } from "@/lib/api-response";
 
-function SESSION_COOKIE_OPTIONS(req: NextRequest) {
+function SESSION_COOKIE_OPTIONS(_req: NextRequest) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

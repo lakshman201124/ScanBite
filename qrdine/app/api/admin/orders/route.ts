@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       where.status = { notIn: ["served", "cancelled"] as OrderStatus[] };
     }
 
-    const [orders, total] = await Promise.all([
+    const [orders, _total] = await Promise.all([
       prisma.order.findMany({
         where,
         include: {

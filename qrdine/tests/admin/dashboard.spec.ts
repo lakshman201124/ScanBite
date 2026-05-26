@@ -58,8 +58,10 @@ test.describe('Dashboard — welcome header', () => {
 
   test('"New order" button is visible and links to /dashboard/orders/new', async ({ page }) => {
     await page.goto('/dashboard');
-    const newOrderBtn = page.locator('a[href="/dashboard/orders/new"] button, a[href="/dashboard/orders/new"]');
-    await expect(newOrderBtn).toBeVisible({ timeout: 10_000 });
+    // Let page load fully if databases are cold
+    await page.locator('h1').filter({ hasText: /Welcome/i }).first().waitFor({ state: 'visible', timeout: 15_000 });
+    const newOrderBtn = page.locator('a[href="/dashboard/orders/new"] button, a[href="/dashboard/orders/new"]').first();
+    await expect(newOrderBtn).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -154,7 +156,7 @@ test.describe('Dashboard — live orders panel', () => {
     await expect(ordersCard).toBeVisible();
 
     const hasNoOrders = await ordersCard.getByText(/No orders yet/i).count() > 0;
-    const hasOrderRows = await ordersCard.locator('.order-row').count() > 0;
+    const hasOrderRows = await ordersCard.locator('.order-row, .order-card-row').count() > 0;
 
     expect(hasNoOrders || hasOrderRows).toBeTruthy();
   });

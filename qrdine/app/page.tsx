@@ -13,10 +13,9 @@ import {
   Eye, 
   EyeOff, 
   ArrowRight, 
-  Sparkles, 
-  TrendingUp, 
-  ShoppingBag, 
-  Check, 
+  Sparkles,
+  TrendingUp,
+  Check,
   Database,
   QrCode,
   Palette,
@@ -59,7 +58,7 @@ function FloatingInput({
 
       {/* Floating Label */}
       <label
-        className={`absolute left-7 bottom-3 font-medium transition-all duration-300 pointer-events-none origin-left ${
+        className={`absolute left-7 bottom-3 font-medium transition-[transform,opacity] duration-300 pointer-events-none origin-left ${
           isFloating
             ? "transform -translate-y-6 scale-75 text-[var(--brand)] font-bold"
             : "text-zinc-400 text-sm"
@@ -233,7 +232,7 @@ export default function SignupPage() {
               <p className="font-[var(--display)] italic text-lg text-zinc-400 mb-10">Preparing your high-converting dining system...</p>
 
               {/* Loading Steps Progression */}
-              <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 text-left space-y-4 shadow-xl">
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 text-left space-y-4 [box-shadow:var(--sh-3)]">
                 {loaderSteps.map((step, idx) => {
                   const isActive = idx === loaderStep;
                   const isDone = idx < loaderStep;
@@ -258,7 +257,7 @@ export default function SignupPage() {
                       }`}>
                         {isDone ? <Check className="w-4 h-4" strokeWidth={3} /> : step.icon}
                       </div>
-                      <span className={`text-xs font-bold transition-all duration-300 ${
+                      <span className={`text-xs font-bold transition-[transform,opacity] duration-300 ${
                         isActive ? "text-white text-sm" : isDone ? "text-zinc-300 line-through decoration-zinc-600" : "text-zinc-500"
                       }`}>
                         {step.title}
@@ -275,7 +274,7 @@ export default function SignupPage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-6 text-emerald-400 font-bold text-xs tracking-wider uppercase"
                 >
-                  🚀 Welcome! Launching Onboarding On-The-Fly...
+                   Welcome! Launching Onboarding On-The-Fly...
                 </motion.p>
               )}
             </div>
@@ -562,7 +561,7 @@ export default function SignupPage() {
               type="submit"
               disabled={loading}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-[var(--ink)] hover:bg-zinc-800 disabled:bg-zinc-300 text-white font-extrabold rounded-full py-4 text-sm tracking-wide transition-all shadow-[0_12px_30px_-8px_rgba(20,19,26,0.35)] flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              className="w-full bg-[var(--ink)] hover:bg-zinc-800 disabled:bg-zinc-300 text-white font-extrabold rounded-full py-4 text-sm tracking-wide transition-[transform,opacity] shadow-[0_12px_30px_-8px_rgba(20,19,26,0.35)] flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

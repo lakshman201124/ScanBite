@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
 import { z } from "zod";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.restaurantId) return error("Unauthorized", 401);

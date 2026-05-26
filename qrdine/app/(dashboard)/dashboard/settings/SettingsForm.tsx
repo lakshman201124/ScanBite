@@ -45,7 +45,7 @@ const profileSchema = z.object({
 });
 
 const brandSchema = z.object({
-  brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex (e.g. #FF4D3D)"),
+  brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex (e.g. var(--brand))"),
   logo_url:    z.string().url("Invalid URL").optional().or(z.literal("")),
 });
 
@@ -69,19 +69,19 @@ type StaffForm   = z.infer<typeof staffSchema>;
 
 /* ═══════════════════════ CONSTANTS ═══════════════════════ */
 const TABS = [
-  { id: "profile",  label: "Restaurant",     ico: "🏢" },
-  { id: "branding", label: "Branding",        ico: "🎨" },
-  { id: "tax",      label: "Tax & Billing",   ico: "🧾" },
-  { id: "staff",    label: "Staff",           ico: "👥" },
-  { id: "printer",  label: "Hardware",        ico: "🖨️" },
+  { id: "profile",  label: "Restaurant",     ico: "" },
+  { id: "branding", label: "Branding",        ico: "" },
+  { id: "tax",      label: "Tax & Billing",   ico: "" },
+  { id: "staff",    label: "Staff",           ico: "" },
+  { id: "printer",  label: "Hardware",        ico: "️" },
   { id: "plan",     label: "Plan",            ico: "⭐" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 const BRAND_PRESETS = [
-  "#FF4D3D", "#E63B2C", "#1E9E5E", "#2E6EF7", "#D97706",
-  "#7C3AED", "#DB2777", "#0F766E", "#059669", "#1D4ED8",
+  "var(--brand)", "#E63B2C", "var(--green)", "#2E6EF7", "#D97706",
+  "var(--brand)", "#DB2777", "#0F766E", "#059669", "#0284C7",
   "#171717", "#64748B",
 ];
 
@@ -258,16 +258,16 @@ function ProfileTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: 
 /* ═══════════════════════ TAB: BRANDING ═══════════════════════ */
 function BrandingTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: () => void }) {
   const [saving, setSaving]     = useState(false);
-  const [liveColor, setLiveColor] = useState(restaurant.brand_color ?? "#FF4D3D");
+  const [liveColor, setLiveColor] = useState(restaurant.brand_color ?? "var(--brand)");
   const colorRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm<BrandForm>({
     resolver: zodResolver(brandSchema),
-    defaultValues: { brand_color: restaurant.brand_color ?? "#FF4D3D", logo_url: restaurant.logo_url ?? "" },
+    defaultValues: { brand_color: restaurant.brand_color ?? "var(--brand)", logo_url: restaurant.logo_url ?? "" },
   });
 
   useEffect(() => {
-    const c = restaurant.brand_color ?? "#FF4D3D";
+    const c = restaurant.brand_color ?? "var(--brand)";
     reset({ brand_color: c, logo_url: restaurant.logo_url ?? "" });
     setLiveColor(c);
   }, [restaurant, reset]);
@@ -307,7 +307,7 @@ function BrandingTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved:
                 <Inp
                   {...register("brand_color")}
                   error={!!errors.brand_color}
-                  placeholder="#FF4D3D"
+                  placeholder="var(--brand)"
                   style={{ fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: ".06em" }}
                   onChange={e => {
                     const v = e.target.value;
@@ -614,7 +614,7 @@ function StaffTab() {
           <div style={{ textAlign: "center", padding: "32px 0", font: "500 13px var(--sans)", color: "var(--red)" }}>Failed to load staff. Refresh to try again.</div>
         ) : staff.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 0", border: "1.5px dashed var(--hairline)", borderRadius: 14 }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>👨‍🍳</div>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>‍</div>
             <p style={{ margin: "0 0 4px", font: "700 14px var(--sans)" }}>No staff yet</p>
             <p style={{ margin: 0, font: "500 12px var(--sans)", color: "var(--muted)" }}>Add chefs and waiters above.</p>
           </div>

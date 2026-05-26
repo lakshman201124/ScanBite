@@ -133,16 +133,35 @@ export default async function BillingPage() {
                 Search, filter, print and send invoices
               </div>
             </div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              font: "700 11px var(--sans)", color: "var(--muted)",
-              background: "var(--bg)", border: "1px solid var(--hairline)",
-              padding: "6px 12px", borderRadius: 999,
-            }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              {summary.total_orders} paid today
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <a
+                href="/api/admin/export/bills"
+                className="export-btn"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  font: "700 11px var(--sans)", color: "var(--brand)",
+                  background: "var(--brand-tint)", border: "1px solid rgba(255,77,61,0.2)",
+                  padding: "6px 12px", borderRadius: 999,
+                  textDecoration: "none", cursor: "pointer",
+                  transition: "opacity 0.15s",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                Export
+              </a>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                font: "700 11px var(--sans)", color: "var(--muted)",
+                background: "var(--bg)", border: "1px solid var(--hairline)",
+                padding: "6px 12px", borderRadius: 999,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                {summary.total_orders} paid today
+              </div>
             </div>
           </div>
           <div style={{ padding: "18px 22px 22px" }}>

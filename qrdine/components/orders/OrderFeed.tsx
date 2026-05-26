@@ -36,7 +36,7 @@ const COLUMNS: { key: string; label: string; statuses: string[]; color: string; 
     key: "ready",
     label: "Ready",
     statuses: ["ready"],
-    color: "#1E9E5E",
+    color: "var(--green)",
     softBg: "rgba(30,158,94,.07)",
     emptyIcon: <CheckCircle2 size={20} strokeWidth={1.25} />,
     emptyLabel: "The pass is clear",

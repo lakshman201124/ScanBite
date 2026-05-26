@@ -77,8 +77,9 @@ test.describe('Create table', () => {
     await expect(tableNumInput).toBeVisible({ timeout: 5_000 });
   });
 
-  test('API POST /api/tables requires auth', async ({ request }) => {
-    const res = await request.post(`${BASE_URL}/api/tables`, {
+  test('API POST /api/tables requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.post(`${BASE_URL}/api/tables`, {
       data: { table_number: `T-${uid()}`, capacity: 4 },
     });
     expect([401, 403]).toContain(res.status());
@@ -119,8 +120,9 @@ test.describe('QR Code management', () => {
     }
   });
 
-  test('API PATCH /api/tables/[id] to regenerate QR requires auth', async ({ request }) => {
-    const res = await request.patch(`${BASE_URL}/api/tables/some-id`, {
+  test('API PATCH /api/tables/[id] to regenerate QR requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.patch(`${BASE_URL}/api/tables/some-id`, {
       data: { regenerate_qr: true },
     });
     expect([401, 403]).toContain(res.status());
@@ -130,8 +132,9 @@ test.describe('QR Code management', () => {
 // ─── Delete Table ─────────────────────────────────────────────────────────────
 
 test.describe('Delete table', () => {
-  test('API DELETE /api/tables/[id] requires auth', async ({ request }) => {
-    const res = await request.delete(`${BASE_URL}/api/tables/some-id`);
+  test('API DELETE /api/tables/[id] requires auth', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.delete(`${BASE_URL}/api/tables/some-id`);
     expect([401, 403]).toContain(res.status());
   });
 
@@ -156,8 +159,9 @@ test.describe('Delete table', () => {
 // ─── GET /api/tables ─────────────────────────────────────────────────────────
 
 test.describe('GET /api/tables', () => {
-  test('unauthenticated request returns 401', async ({ request }) => {
-    const res = await request.get(`${BASE_URL}/api/tables`);
+  test('unauthenticated request returns 401', async ({ playwright }) => {
+    const unauth = await playwright.request.newContext({ storageState: { cookies: [], origins: [] } });
+    const res = await unauth.get(`${BASE_URL}/api/tables`);
     expect([401, 403]).toContain(res.status());
   });
 });

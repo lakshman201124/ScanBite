@@ -131,7 +131,7 @@ export function BillPaymentPage({ bill, restaurantName = "Olio Trattoria", resta
         <div style={{ overflowY: "auto", padding: 28 }}>
           <div style={{ maxWidth: 680, margin: "0 auto" }}>
             {/* Bill header card */}
-            <div style={{ background: "#14131A", borderRadius: 20, padding: "24px 28px 28px", marginBottom: 24, color: "#fff" }}>
+            <div style={{ background: "var(--ink)", borderRadius: 20, padding: "24px 28px 28px", marginBottom: 24, color: "#fff" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                 <div>
                   <div style={{ font: "600 10px var(--sans)", color: "rgba(255,255,255,.4)", textTransform: "uppercase", letterSpacing: ".1em" }}>BILL NO.</div>

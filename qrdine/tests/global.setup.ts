@@ -21,7 +21,7 @@ setup('authenticate as admin and save session', async ({ page }) => {
   const result = await Promise.race([
     page.waitForURL('**/dashboard', { timeout: 30_000 }).then(() => 'success'),
     page.waitForURL('**/api/auth/error', { timeout: 30_000 }).then(() => 'auth-error'),
-    page.waitForURL('**/login*', { timeout: 30_000 }).then(() => 'login-error'),
+    page.waitForURL('**/login?error=*', { timeout: 30_000 }).then(() => 'login-error'),
   ]);
 
   if (result !== 'success') {

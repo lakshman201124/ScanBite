@@ -39,7 +39,7 @@ interface Props {
   categories: string[];
 }
 
-const GUEST_COLORS = ["var(--brand)", "#2E6EF7", "#1E9E5E", "#F2A500", "#9333EA"];
+const GUEST_COLORS = ["var(--brand)", "#2E6EF7", "var(--green)", "var(--amber)", "#9333EA"];
 
 export function ManualOrderBuilder({ tables, items, categories }: Props) {
   const router = useRouter();
@@ -214,7 +214,7 @@ export function ManualOrderBuilder({ tables, items, categories }: Props) {
                     onClick={() => addToCart(item)}>
                     {/* Image */}
                     <div style={{ height: 120, background: item.image_url ? `url(${item.image_url}) center/cover` : "var(--surface-2)", position: "relative", display: item.image_url ? undefined : "grid", placeItems: item.image_url ? undefined : "center" }}>
-                      {!item.image_url && <span style={{ opacity: 0.2, fontSize: 32 }}>🍽</span>}
+                      {!item.image_url && <span style={{ opacity: 0.2, fontSize: 32 }}></span>}
 
                       {/* Bestseller badge */}
                       {item.is_featured && (

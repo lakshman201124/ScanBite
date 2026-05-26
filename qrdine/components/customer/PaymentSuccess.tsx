@@ -19,7 +19,7 @@ export function PaymentSuccess({ orderId, orderNumber, total, paymentId, restaur
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.1 }}
-        style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, #1E9E5E, #26c972)", display: "grid", placeItems: "center", marginBottom: 24, boxShadow: "0 8px 32px rgba(30,158,94,.3)" }}
+        style={{ width: 88, height: 88, borderRadius: "50%", background: "linear-gradient(135deg, var(--green), #26c972)", display: "grid", placeItems: "center", marginBottom: 24, boxShadow: "0 8px 32px rgba(30,158,94,.3)" }}
       >
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="m5 12 5 5L20 7"/>
@@ -28,7 +28,7 @@ export function PaymentSuccess({ orderId, orderNumber, total, paymentId, restaur
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <h1 style={{ margin: "0 0 8px", font: "800 26px var(--sans)", color: "var(--ink)", letterSpacing: "-.02em" }}>
-          Payment Successful! 🎉
+          Payment Successful! 
         </h1>
         <p style={{ margin: "0 0 24px", font: "500 14px var(--sans)", color: "var(--muted)" }}>
           Your payment of <strong>₹{total.toFixed(2)}</strong> has been received.

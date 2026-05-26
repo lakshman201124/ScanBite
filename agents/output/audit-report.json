@@ -1,0 +1,154 @@
+{
+  "timestamp": "2026-05-26T10:01:16.200Z",
+  "summary": {
+    "timestamp": "2026-05-26T10:01:16.200Z",
+    "total_screens": 24,
+    "screens_with_issues": 3,
+    "critical_count": 0,
+    "high_count": 0,
+    "medium_count": 15,
+    "low_count": 0
+  },
+  "screens": [
+    {
+      "id": "_global",
+      "issues": [
+        {
+          "severity": "MEDIUM",
+          "rule": "CORRECT_CTA_RADIUS",
+          "file": "components/customer/PhoneOtpSheet.tsx",
+          "line": 136,
+          "observed": "<button onClick={onClose} className=\"grid h-9 w-9 place-items-center rounded-[10px] bg-[var(--surface-2)] text-[var(--mu",
+          "expected": "Add border-radius: var(--r-pill) to all primary CTA buttons",
+          "fix_hint": "Add border-radius: var(--r-pill) to all primary CTA buttons"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "CORRECT_CTA_RADIUS",
+          "file": "app/page.tsx",
+          "line": 357,
+          "observed": "<button type=\"button\" className=\"bg-[var(--brand)] text-white text-[9px] font-extrabold px-3 py-1 rounded-lg\">",
+          "expected": "Add border-radius: var(--r-pill) to all primary CTA buttons",
+          "fix_hint": "Add border-radius: var(--r-pill) to all primary CTA buttons"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "CORRECT_CTA_RADIUS",
+          "file": "app/page.tsx",
+          "line": 382,
+          "observed": "<button type=\"button\" className=\"bg-[var(--brand)] text-white text-[9px] font-extrabold px-3 py-1 rounded-lg\">",
+          "expected": "Add border-radius: var(--r-pill) to all primary CTA buttons",
+          "fix_hint": "Add border-radius: var(--r-pill) to all primary CTA buttons"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "CORRECT_CTA_RADIUS",
+          "file": "app/(auth)/signup/page.tsx",
+          "line": 392,
+          "observed": "<button type=\"button\" className=\"bg-[var(--brand)] text-white text-[9px] font-extrabold px-3 py-1 rounded-lg\">",
+          "expected": "Add border-radius: var(--r-pill) to all primary CTA buttons",
+          "fix_hint": "Add border-radius: var(--r-pill) to all primary CTA buttons"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "CORRECT_CTA_RADIUS",
+          "file": "app/(auth)/signup/page.tsx",
+          "line": 417,
+          "observed": "<button type=\"button\" className=\"bg-[var(--brand)] text-white text-[9px] font-extrabold px-3 py-1 rounded-lg\">",
+          "expected": "Add border-radius: var(--r-pill) to all primary CTA buttons",
+          "fix_hint": "Add border-radius: var(--r-pill) to all primary CTA buttons"
+        }
+      ]
+    },
+    {
+      "id": "customer-menu",
+      "issues": [
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "customer-menu",
+          "observed": "Potential violation: blue primary color",
+          "expected": "Screen customer-menu must not have: blue primary color",
+          "fix_hint": "Review customer-menu against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "customer-menu",
+          "observed": "Potential violation: inline spinner",
+          "expected": "Screen customer-menu must not have: inline spinner",
+          "fix_hint": "Review customer-menu against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "customer-menu",
+          "observed": "Potential violation: blue primary color",
+          "expected": "Screen customer-menu must not have: blue primary color",
+          "fix_hint": "Review customer-menu against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "customer-menu",
+          "observed": "Potential violation: inline spinner",
+          "expected": "Screen customer-menu must not have: inline spinner",
+          "fix_hint": "Review customer-menu against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "customer-menu",
+          "observed": "Potential violation: blue primary color",
+          "expected": "Screen customer-menu must not have: blue primary color",
+          "fix_hint": "Review customer-menu against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "customer-menu",
+          "observed": "Potential violation: inline spinner",
+          "expected": "Screen customer-menu must not have: inline spinner",
+          "fix_hint": "Review customer-menu against DESIGN_SPEC.md section 6-8"
+        }
+      ]
+    },
+    {
+      "id": "admin-dashboard",
+      "issues": [
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "admin-dashboard",
+          "observed": "Potential violation: colored card header bands",
+          "expected": "Screen admin-dashboard must not have: colored card header bands",
+          "fix_hint": "Review admin-dashboard against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "admin-dashboard",
+          "observed": "Potential violation: zebra table rows",
+          "expected": "Screen admin-dashboard must not have: zebra table rows",
+          "fix_hint": "Review admin-dashboard against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "admin-dashboard",
+          "observed": "Potential violation: colored card header bands",
+          "expected": "Screen admin-dashboard must not have: colored card header bands",
+          "fix_hint": "Review admin-dashboard against DESIGN_SPEC.md section 6-8"
+        },
+        {
+          "severity": "MEDIUM",
+          "rule": "SCREEN_CONTRACT",
+          "screen": "admin-dashboard",
+          "observed": "Potential violation: zebra table rows",
+          "expected": "Screen admin-dashboard must not have: zebra table rows",
+          "fix_hint": "Review admin-dashboard against DESIGN_SPEC.md section 6-8"
+        }
+      ]
+    }
+  ]
+}

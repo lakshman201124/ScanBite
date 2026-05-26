@@ -40,10 +40,10 @@ function StockLevelBar({ item }: { item: InventoryItem }) {
   const isLow  = !isOut && item.stock_quantity <= threshold;
 
   const barColor = isOut
-    ? "linear-gradient(90deg, #E03A30 0%, #FF5A50 100%)"
+    ? "linear-gradient(90deg, var(--red) 0%, #FF5A50 100%)"
     : isLow
-    ? "linear-gradient(90deg, #F2A500 0%, #FFB733 100%)"
-    : "linear-gradient(90deg, #1E9E5E 0%, #28C070 100%)";
+    ? "linear-gradient(90deg, var(--amber) 0%, #FFB733 100%)"
+    : "linear-gradient(90deg, var(--green) 0%, #28C070 100%)";
 
   return (
     <div style={{ width: 72, marginTop: 6 }}>

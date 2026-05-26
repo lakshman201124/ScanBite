@@ -92,6 +92,14 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
 
   // 2. Rate limiting for Customer Orders API
   if (pathname === "/api/customer/orders") {
+    // Check if test bypass is active to avoid rate-limiting E2E tests
+    if (
+      process.env.TEST_OTP_BYPASS === "true" &&
+      process.env.NODE_ENV !== "production"
+    ) {
+      return NextResponse.next();
+    }
+
     try {
       const { success, limit, reset, remaining } = await orderRatelimit.limit(ip);
       if (!success) {

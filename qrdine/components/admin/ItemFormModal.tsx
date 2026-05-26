@@ -20,10 +20,10 @@ interface Props {
 }
 
 const FOOD_TYPES = [
-  { value: "veg",     label: "Veg",     color: "#1E9E5E" },
+  { value: "veg",     label: "Veg",     color: "var(--green)" },
   { value: "non_veg", label: "Non-veg", color: "#C8462F" },
   { value: "egg",     label: "Egg",     color: "#E0A82E" },
-  { value: "vegan",   label: "Vegan",   color: "#1E9E5E" },
+  { value: "vegan",   label: "Vegan",   color: "var(--green)" },
 ];
 
 function newGroup(): CustomizationGroup {

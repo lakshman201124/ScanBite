@@ -1,5 +1,5 @@
 import type { BillResult } from "@/lib/billing";
-import { CMD, buildBuffer, boldLine, centeredLine, dashes, line, threeColLine, twoColLine } from "./escpos";
+import { CMD, buildBuffer, boldLine, centeredLine, dashes, threeColLine, twoColLine } from "./escpos";
 
 export interface BillPrintInput {
   restaurant_name: string;

@@ -172,8 +172,8 @@ export function BillDetailModal({ bill, onClose, onPrint }: Props) {
                   onClick={() => setSendChannel(ch)}
                   style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `1.5px solid ${sendChannel === ch ? "var(--brand)" : "var(--hairline)"}`, background: sendChannel === ch ? "rgba(255,77,61,.08)" : "transparent", font: "600 12px var(--sans)", color: sendChannel === ch ? "var(--brand)" : "var(--muted)", cursor: "pointer", textTransform: "capitalize" }}
                 >
-                  {ch === "whatsapp" ? "📱 WhatsApp" : "✉️ Email"}
-                  {(ch === "whatsapp" ? bill.whatsapp_sent : bill.email_sent) && " ✓"}
+                  {ch === "whatsapp" ? " WhatsApp" : "️ Email"}
+                  {(ch === "whatsapp" ? bill.whatsapp_sent : bill.email_sent) && " "}
                 </button>
               ))}
             </div>

@@ -27,7 +27,7 @@ async function loginAsChef(page: import('@playwright/test').Page) {
   }
 
   await page.locator('input[type="tel"]').first().fill(CHEF_PHONE);
-  await page.locator('button').filter({ hasText: /send otp|send/i }).first().click();
+  await page.locator('button').filter({ hasText: /continue|send otp|send/i }).first().click();
 
   // Wait for OTP inputs to appear
   await expect(page.locator('input[inputmode="numeric"]').first()).toBeVisible({ timeout: 10_000 });
@@ -64,7 +64,7 @@ test.describe('Chef login page — section 1c', () => {
     const phoneInput = page.locator('input[type="tel"]').first();
     await phoneInput.fill('abc123'); // invalid phone format
 
-    const sendBtn = page.locator('button').filter({ hasText: /send otp|send/i }).first();
+    const sendBtn = page.locator('button').filter({ hasText: /continue|send otp|send/i }).first();
     // Click with force to bypass any overlay
     await sendBtn.click({ force: true });
 
@@ -84,7 +84,7 @@ test.describe('Chef login page — section 1c', () => {
     const phoneInput = page.locator('input[type="tel"]').first();
     await phoneInput.fill('abcdefghij');
 
-    const sendBtn = page.locator('button').filter({ hasText: /send otp|send/i }).first();
+    const sendBtn = page.locator('button').filter({ hasText: /continue|send otp|send/i }).first();
     // Button may be disabled or validation error shown after click
     const isDisabled = await sendBtn.isDisabled().catch(() => false);
     if (!isDisabled) {

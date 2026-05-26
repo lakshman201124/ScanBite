@@ -537,7 +537,7 @@ export function AdminOrderCard({ order, onStatusChange }: Props) {
                 padding: "4px 8px", borderRadius: 7, fontWeight: 600,
                 display: "flex", alignItems: "center", gap: 5,
               }}>
-                <span style={{ fontSize: 11 }}>📝</span>
+                <span style={{ fontSize: 11 }}></span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {order.notes}
                 </span>

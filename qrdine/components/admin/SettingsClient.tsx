@@ -147,7 +147,7 @@ const brandingSchema = z.object({
   logo_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   brand_color: z
     .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color (e.g. #FF4D3D)"),
+    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color (e.g. var(--brand))"),
 });
 
 const taxSchema = z.object({
@@ -179,8 +179,8 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 const BRAND_PRESETS = [
-  "#FF4D3D", "#E63B2C", "#1E9E5E", "#2E6EF7", "#D97706",
-  "#7C3AED", "#DB2777", "#0F766E", "#059669", "#1D4ED8",
+  "var(--brand)", "#E63B2C", "var(--green)", "#2E6EF7", "#D97706",
+  "var(--brand)", "#DB2777", "#0F766E", "#059669", "#0284C7",
   "#171717", "#64748B",
 ];
 
@@ -406,23 +406,23 @@ function ProfileSection({ settings, onSaved }: { settings: RestaurantSettings; o
 /* ═══════════════════════ BRANDING SECTION ═══════════════════════ */
 function BrandingSection({ settings, onSaved }: { settings: RestaurantSettings; onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
-  const [liveColor, setLiveColor] = useState(settings.brand_color ?? "#FF4D3D");
+  const [liveColor, setLiveColor] = useState(settings.brand_color ?? "var(--brand)");
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = useForm<BrandingForm>({
     resolver: zodResolver(brandingSchema),
     defaultValues: {
       logo_url:    settings.logo_url ?? "",
-      brand_color: settings.brand_color ?? "#FF4D3D",
+      brand_color: settings.brand_color ?? "var(--brand)",
     },
   });
 
   useEffect(() => {
     reset({
       logo_url:    settings.logo_url ?? "",
-      brand_color: settings.brand_color ?? "#FF4D3D",
+      brand_color: settings.brand_color ?? "var(--brand)",
     });
-    setLiveColor(settings.brand_color ?? "#FF4D3D");
+    setLiveColor(settings.brand_color ?? "var(--brand)");
   }, [settings, reset]);
 
   const watchedLogo = watch("logo_url");
@@ -487,7 +487,7 @@ function BrandingSection({ settings, onSaved }: { settings: RestaurantSettings; 
                 <Input
                   {...register("brand_color")}
                   error={!!errors.brand_color}
-                  placeholder="#FF4D3D"
+                  placeholder="var(--brand)"
                   style={{ fontFamily: "var(--mono)", letterSpacing: ".06em", textTransform: "uppercase" }}
                   onChange={e => {
                     const val = e.target.value;
@@ -944,7 +944,7 @@ function StaffSection() {
             padding: "48px 20px", textAlign: "center",
             border: "1.5px dashed var(--hairline)", borderRadius: "var(--r-2)",
           }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>👨‍🍳</div>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>‍</div>
             <p style={{ margin: "0 0 6px", font: "700 15px var(--sans)", color: "var(--ink)" }}>No staff added yet</p>
             <p style={{ margin: 0, font: "500 13px var(--sans)", color: "var(--muted)" }}>Add chefs and waiters so they can log in with their phone number.</p>
           </div>

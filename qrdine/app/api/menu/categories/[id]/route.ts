@@ -24,6 +24,11 @@ export async function PATCH(
     const parsed = updateCategorySchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) return error("Category not found", 404);
+    const exists = await prisma.menuCategory.findFirst({ where: { id, restaurant_id: restaurantId } });
+    if (!exists) return error("Category not found", 404);
+
     const category = await prisma.menuCategory.update({
       where: { id, restaurant_id: restaurantId },
       data: {
@@ -51,7 +56,10 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.restaurantId) return unauthorized();
     const restaurantId = session.user.restaurantId;
-    const { id } = await params;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) return error("Category not found", 404);
+    const exists = await prisma.menuCategory.findFirst({ where: { id, restaurant_id: restaurantId } });
+    if (!exists) return error("Category not found", 404);
 
     const itemCount = await prisma.menuItem.count({
       where: { category_id: id, restaurant_id: restaurantId },

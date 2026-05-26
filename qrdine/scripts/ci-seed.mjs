@@ -14,6 +14,8 @@ const RESTAURANT_B = "b2c3d4e5-f6a7-8901-bcde-f12345678901";
 async function seed() {
   console.log("🌱 Seeding via Supabase JS client...");
 
+  const now = new Date().toISOString();
+
   const { error: rErr } = await supabase.from("restaurants").upsert(
     [
       {
@@ -25,6 +27,8 @@ async function seed() {
         plan: "growth",
         onboarded: true,
         is_active: true,
+        created_at: now,
+        updated_at: now,
       },
       {
         id: RESTAURANT_B,
@@ -35,6 +39,8 @@ async function seed() {
         plan: "starter",
         onboarded: true,
         is_active: true,
+        created_at: now,
+        updated_at: now,
       },
     ],
     { onConflict: "slug", ignoreDuplicates: true }
@@ -45,6 +51,7 @@ async function seed() {
   const { error: uErr } = await supabase.from("users").upsert(
     [
       {
+        id: "e1a1a1a1-2222-3333-4444-555555555555",
         restaurant_id: RESTAURANT_A,
         name: "Priya Sharma",
         email: "admin@spicegarden.com",
@@ -53,8 +60,11 @@ async function seed() {
         pin_hash: null,
         role: "admin",
         is_active: true,
+        created_at: now,
+        updated_at: now,
       },
       {
+        id: "e2a2a2a2-2222-3333-4444-555555555555",
         restaurant_id: RESTAURANT_B,
         name: "Rahul Kumar",
         email: "admin@biryanihouse.com",
@@ -63,8 +73,11 @@ async function seed() {
         pin_hash: null,
         role: "admin",
         is_active: true,
+        created_at: now,
+        updated_at: now,
       },
       {
+        id: "e3a3a3a3-2222-3333-4444-555555555555",
         restaurant_id: RESTAURANT_A,
         name: "Arjun Chef",
         email: "chef@spicegarden.com",
@@ -73,8 +86,11 @@ async function seed() {
           "$2b$12$OXTfTT42jCNTWxZ6SoccTu3luaZ0fcqyIA4ofZLoV94dmhKViv7y2",
         role: "chef",
         is_active: true,
+        created_at: now,
+        updated_at: now,
       },
       {
+        id: "e4a4a4a4-2222-3333-4444-555555555555",
         restaurant_id: RESTAURANT_B,
         name: "Suresh Chef",
         email: "chef@biryanihouse.com",
@@ -83,6 +99,8 @@ async function seed() {
           "$2b$12$TChyPnQ5Id3KUoa4A98fC.aNzFKd8wXRnnLoI.LNLc5XxZZjDL5m",
         role: "chef",
         is_active: true,
+        created_at: now,
+        updated_at: now,
       },
     ],
     { onConflict: "email,restaurant_id", ignoreDuplicates: true }

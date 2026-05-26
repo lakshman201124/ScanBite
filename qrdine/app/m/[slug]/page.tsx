@@ -38,7 +38,7 @@ export default async function MenuPage({ params, searchParams }: PageProps) {
     return (
       <div className="customer-scope" style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>⚠️</div>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>️</div>
           <h1 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 800, color: "var(--ink)" }}>Invalid QR Code</h1>
           <p style={{ margin: 0, fontSize: 14, color: "var(--muted)" }}>This QR code is not valid. Please ask your server for a new one.</p>
         </div>

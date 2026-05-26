@@ -7,14 +7,14 @@ interface BreakdownProps {
 
 const STATUS_COLORS: Record<string, string> = {
   pending:   "#2E6EF7",
-  confirmed: "#F2A500",
-  preparing: "#F2A500",
-  ready:     "#1E9E5E",
-  served:    "#FF4D3D",
-  cancelled: "#E03A30",
+  confirmed: "var(--amber)",
+  preparing: "var(--amber)",
+  ready:     "var(--green)",
+  served:    "var(--brand)",
+  cancelled: "var(--red)",
 };
 
-const PAYMENT_COLORS = ["#FF4D3D", "#2E6EF7", "#1E9E5E", "#F2A500", "#9A99A4"];
+const PAYMENT_COLORS = ["var(--brand)", "#2E6EF7", "var(--green)", "var(--amber)", "#9A99A4"];
 
 export function OrdersBreakdown({ ordersByStatus, paymentMethods }: BreakdownProps) {
   const totalOrders   = ordersByStatus.reduce((s, x) => s + x.count, 0) || 1;

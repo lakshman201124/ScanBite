@@ -65,7 +65,7 @@ export async function chefLogin(
   code: string
 ) {
   const res = await request.post(`${BASE_URL}/api/auth/chef-login`, {
-    data: { phone, code },
+    data: { phone, pin: code },
   });
   return res;
 }

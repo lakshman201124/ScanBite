@@ -95,7 +95,7 @@ export function ButtonWithIcon({
       className={[
         /* exact structure from button.html */
         "relative text-sm font-bold rounded-full h-12 p-1 ps-6 pe-14",
-        "group transition-all duration-500 overflow-hidden cursor-pointer",
+        "group transition-[transform,opacity] duration-500 overflow-hidden cursor-pointer",
         "hover:ps-14 hover:pe-6",
         "flex items-center",
         fullWidth ? "w-full justify-start" : "w-fit",
@@ -114,7 +114,7 @@ export function ButtonWithIcon({
       }}
     >
       {/* Label — z-10 so it stays above ball during slide */}
-      <span className="relative z-10 transition-all duration-500">
+      <span className="relative z-10 transition-[transform,opacity] duration-500">
         {loading ? (loadingText ?? "Loading…") : children}
       </span>
 
@@ -123,7 +123,7 @@ export function ButtonWithIcon({
         className={[
           "absolute right-1 w-10 h-10 rounded-full",
           "flex items-center justify-center",
-          "transition-all duration-500",
+          "transition-[transform,opacity] duration-500",
           "group-hover:right-[calc(100%-44px)]",
           loading ? "" : "group-hover:rotate-45",
         ]

@@ -78,10 +78,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check stock for all items
-    const itemMap = new Map(menuItems.map((i) => [i.id, i as any]));
+    const itemMap = new Map(menuItems.map((i) => [i.id, i]));
     for (const cartItem of parsed.data.items) {
       const dbItem = itemMap.get(cartItem.menu_item_id);
-      if (dbItem?.stock_quantity !== null && dbItem.stock_quantity < cartItem.quantity) {
+      if (dbItem && dbItem.stock_quantity !== null && dbItem.stock_quantity < cartItem.quantity) {
         return error(`Not enough stock for ${dbItem.name}. Only ${dbItem.stock_quantity} left.`, 422);
       }
     }

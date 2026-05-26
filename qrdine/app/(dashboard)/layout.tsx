@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "sans-serif", color: "#333" }}>
         <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Database Unavailable</h1>
         <p style={{ color: "#666", marginBottom: "1.5rem" }}>Unable to connect to the database. Please try again in a moment.</p>
-        <a href="/dashboard" style={{ padding: "0.5rem 1.25rem", background: "#FF4D3D", color: "#fff", borderRadius: "6px", textDecoration: "none" }}>Retry</a>
+        <a href="/dashboard" style={{ padding: "0.5rem 1.25rem", background: "var(--brand)", color: "#fff", borderRadius: "6px", textDecoration: "none" }}>Retry</a>
       </div>
     );
   }
