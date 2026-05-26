@@ -15,8 +15,7 @@ env:
   TEST_OTP_BYPASS: "true"
   NODE_VERSION: "20"
 
-# ─── Reusable setup steps shared across all jobs ───────────────────────────────
-# pnpm/action-setup must run BEFORE setup-node so the cache integration works.
+# ─── Setup: node via actions/setup-node, pnpm via npm install -g ───────────────
 
 jobs:
 
@@ -30,16 +29,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -78,16 +73,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -130,16 +121,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -182,16 +169,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -236,16 +219,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -288,16 +267,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -340,16 +315,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -392,16 +363,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -444,16 +411,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -497,16 +460,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install dependencies
         working-directory: qrdine
@@ -550,16 +509,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: qrdine/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10
 
       - name: Install qrdine dependencies
         working-directory: qrdine
