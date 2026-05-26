@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "Admin login",
+      "status": "PASS"
+    },
+    {
+      "name": "Menu preview renders customer UI",
+      "status": "PASS"
+    },
+    {
+      "name": "Fetch QR token",
+      "status": "PASS"
+    },
+    {
+      "name": "Customer menu loads via QR",
+      "status": "PASS"
+    },
+    {
+      "name": "ADD button adds to cart",
+      "status": "PASS"
+    },
+    {
+      "name": "Checkout page loads with items",
+      "status": "PASS"
+    },
+    {
+      "name": "Place order flow",
+      "status": "PASS"
+    }
+  ],
+  "consoleErrors": []
+}

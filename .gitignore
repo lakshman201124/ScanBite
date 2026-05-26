@@ -4,6 +4,7 @@
 *.env
 .next/
 qrdine/.next/
+qrdine/*.log
 qrdine/node_modules/
 qrdine/test-results/
 qrdine/.playwright/

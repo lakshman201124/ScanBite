@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-05-19T19:02:27.379Z",
+  "screenshotsDir": "C:\\Users\\LAKSHMAN\\Downloads\\ScanBite\\qrdine\\temporary screenshots\\phase2-audit",
+  "tests": [
+    {
+      "name": "Admin login",
+      "status": "PASS"
+    },
+    {
+      "name": "Menu page loads",
+      "status": "PASS"
+    },
+    {
+      "name": "Add Item disabled without category",
+      "status": "PASS"
+    },
+    {
+      "name": "Select category enables Add Item",
+      "status": "PASS"
+    },
+    {
+      "name": "Menu preview page",
+      "status": "PASS"
+    },
+    {
+      "name": "Tables page",
+      "status": "PASS"
+    },
+    {
+      "name": "Broken sidebar: Analytics 404",
+      "status": "PASS"
+    },
+    {
+      "name": "Fetch table QR token",
+      "status": "PASS"
+    },
+    {
+      "name": "Customer menu via QR session",
+      "status": "PASS"
+    },
+    {
+      "name": "Customer ADD button",
+      "status": "FAIL",
+      "error": "No ADD buttons on menu"
+    },
+    {
+      "name": "Customer checkout page",
+      "status": "PASS"
+    }
+  ],
+  "consoleErrors": [
+    "Refused to display 'http://localhost:3000/' in a frame because it set 'X-Frame-Options' to 'deny'.",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "The result of getServerSnapshot should be cached to avoid an infinite loop",
+    "Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops."
+  ]
+}

@@ -1,0 +1,2 @@
+{"timestamp":"2026-05-19T18:58:35.650Z","level":"debug","message":"Generate code and execute params","context":{"projectName":"qrdine","projectPath":"C:/Users/LAKSHMAN/Downloads/ScanBite/qrdine","testIds":[],"serverMode":"development"}}
+{"timestamp":"2026-05-19T18:58:35.672Z","level":"info","message":"Attempting to start server (attempt 1/3)"}
