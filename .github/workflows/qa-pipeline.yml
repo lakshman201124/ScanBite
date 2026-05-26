@@ -91,10 +91,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
-
       - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
@@ -142,10 +138,6 @@ jobs:
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
 
       - name: Install Playwright (Chromium)
         working-directory: qrdine
@@ -195,10 +187,6 @@ jobs:
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
-
       - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
@@ -246,10 +234,6 @@ jobs:
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
 
       - name: Install Playwright (Chromium)
         working-directory: qrdine
@@ -299,10 +283,6 @@ jobs:
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
-
       - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
@@ -350,10 +330,6 @@ jobs:
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
 
       - name: Install Playwright (Chromium)
         working-directory: qrdine
@@ -403,10 +379,6 @@ jobs:
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
-
       - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
@@ -454,10 +426,6 @@ jobs:
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
 
       - name: Install Playwright (Chromium)
         working-directory: qrdine
@@ -507,10 +475,6 @@ jobs:
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
-
-      - name: Build app
-        working-directory: qrdine
-        run: pnpm build
 
       - name: Install Playwright (Chromium)
         working-directory: qrdine
