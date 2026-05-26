@@ -15,15 +15,13 @@ env:
   TEST_OTP_BYPASS: "true"
   NODE_VERSION: "20"
 
-# ─── Shared setup composite ────────────────────────────────────────────────────
-# Each job re-uses the same install steps. pnpm + node_modules are cached by
-# actions/setup-node so the install is a cache-hit on all jobs after the first.
+# ─── Reusable setup steps shared across all jobs ───────────────────────────────
+# pnpm/action-setup must run BEFORE setup-node so the cache integration works.
 
 jobs:
 
   # ════════════════════════════════════════════════════════════════════════════
   # JOB 0 — Static Analysis (TypeScript + ESLint)
-  # Fastest gate — no browser needed. Fails immediately on type errors or lint.
   # ════════════════════════════════════════════════════════════════════════════
   static-analysis:
     name: "Static Analysis (TS + ESLint)"
@@ -32,14 +30,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
-
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Install dependencies
         working-directory: qrdine
@@ -55,7 +55,6 @@ jobs:
 
   # ════════════════════════════════════════════════════════════════════════════
   # JOB 1 — Auth Tests  (gates all browser jobs)
-  # Runs unauthenticated. Covers signup, login, JWT, CSRF, rate limiting.
   # ════════════════════════════════════════════════════════════════════════════
   auth-tests:
     name: "Auth Tests (UI + API)"
@@ -79,20 +78,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -100,8 +101,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=auth-tests --reporter=list,json,html
 
-      - name: Upload auth report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-auth
@@ -109,7 +109,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 2 — API Tests  (needs auth-tests to confirm auth layer works)
+  # JOB 2 — API Tests
   # ════════════════════════════════════════════════════════════════════════════
   api-tests:
     name: "API Tests"
@@ -130,20 +130,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -151,8 +153,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=api-tests --reporter=list,json,html
 
-      - name: Upload API report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-api
@@ -161,7 +162,6 @@ jobs:
 
   # ════════════════════════════════════════════════════════════════════════════
   # JOB 3 — Security Tests
-  # Tenant isolation, auth bypass, input validation. Always unauthenticated.
   # ════════════════════════════════════════════════════════════════════════════
   security-tests:
     name: "Security Tests"
@@ -182,20 +182,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -203,8 +205,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=security-tests --reporter=list,json,html
 
-      - name: Upload security report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-security
@@ -212,9 +213,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 4 — Admin UI Tests  (pre-authenticated desktop Chrome 1440×900)
-  # Covers: dashboard, orders, menu, tables, billing, analytics, inventory,
-  #         settings, staff, export — 11 spec files.
+  # JOB 4 — Admin UI Tests
   # ════════════════════════════════════════════════════════════════════════════
   admin-ui:
     name: "Admin UI (Desktop)"
@@ -237,20 +236,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -258,8 +259,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=admin-desktop --reporter=list,json,html
 
-      - name: Upload admin UI report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-admin-ui
@@ -267,8 +267,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 5 — Customer Mobile Tests  (Pixel 7 viewport)
-  # Covers: menu, cart, checkout, order tracking — 4 spec files.
+  # JOB 5 — Customer Mobile Tests
   # ════════════════════════════════════════════════════════════════════════════
   customer-mobile:
     name: "Customer Mobile (Pixel 7)"
@@ -289,20 +288,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -310,8 +311,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=customer-mobile --reporter=list,json,html
 
-      - name: Upload customer report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-customer-mobile
@@ -319,7 +319,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 6 — Chef / KDS Tests  (iPad Pro 11 viewport)
+  # JOB 6 — Chef / KDS Tests
   # ════════════════════════════════════════════════════════════════════════════
   chef-kds:
     name: "Chef / KDS (iPad Pro)"
@@ -340,20 +340,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -361,8 +363,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=chef-tablet --reporter=list,json,html
 
-      - name: Upload KDS report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-chef-kds
@@ -370,7 +371,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 7 — Edge Cases & Regression
+  # JOB 7 — Edge Cases
   # ════════════════════════════════════════════════════════════════════════════
   edge-cases:
     name: "Edge Cases & Regression"
@@ -391,20 +392,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -412,8 +415,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=edge-cases --reporter=list,json,html
 
-      - name: Upload edge cases report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-edge-cases
@@ -421,9 +423,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 8 — Design Compliance Audit
-  # Checks brand tokens, no-emoji rules, shadow system, typography against
-  # every admin + customer surface. Runs after UI jobs are green.
+  # JOB 8 — Design Compliance
   # ════════════════════════════════════════════════════════════════════════════
   design-compliance:
     name: "Design Compliance Audit"
@@ -444,20 +444,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (all browsers for visual accuracy)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -465,8 +467,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=design-compliance --reporter=list,json,html
 
-      - name: Upload design compliance report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-design-compliance
@@ -475,8 +476,6 @@ jobs:
 
   # ════════════════════════════════════════════════════════════════════════════
   # JOB 9 — Real-time Socket Tests
-  # Socket.IO event flow: order:created, order:updated, payment:confirmed.
-  # Runs last — depends on app being fully exercised by prior jobs.
   # ════════════════════════════════════════════════════════════════════════════
   realtime-tests:
     name: "Real-time Socket Tests"
@@ -498,20 +497,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
 
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-
       - name: Install dependencies
         working-directory: qrdine
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright (Chromium only)
+      - name: Install Playwright (Chromium)
         working-directory: qrdine
         run: npx playwright install chromium --with-deps
 
@@ -519,8 +520,7 @@ jobs:
         working-directory: qrdine
         run: npx playwright test --project=realtime-tests --reporter=list,json,html
 
-      - name: Upload realtime report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-realtime
@@ -528,9 +528,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 10 — UI Quality Agent Pipeline (Screenshot → Audit → Check critical)
-  # Runs the local Node.js agent pipeline from agents/run-pipeline.js.
-  # Only runs on push to main (not on every PR — it's expensive).
+  # JOB 10 — UI Quality Agent Pipeline (push to main only)
   # ════════════════════════════════════════════════════════════════════════════
   ui-quality-audit:
     name: "UI Quality Audit (Design Agent)"
@@ -552,14 +550,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+          run_install: false
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: qrdine/pnpm-lock.yaml
-
-      - name: Enable pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Install qrdine dependencies
         working-directory: qrdine
@@ -572,22 +572,17 @@ jobs:
       - name: Start app in background
         working-directory: qrdine
         run: pnpm dev &
-        env:
-          PORT: 3000
 
       - name: Wait for app to be ready
         run: npx wait-on http://localhost:3000 --timeout 60000
 
-      - name: Run screenshot + audit pipeline (levels 1 & 2)
-        working-directory: .
+      - name: Run screenshot + audit pipeline
         run: node agents/run-pipeline.js --level=1 && node agents/run-pipeline.js --level=2
 
-      - name: Fail if any CRITICAL design issues found
-        working-directory: .
+      - name: Fail on CRITICAL design issues
         run: node agents/check-critical-failures.js
 
-      - name: Upload design audit report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: report-ui-quality-audit
@@ -595,7 +590,7 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
-  # JOB 11 — Final Gate (summary job — all non-optional jobs must pass)
+  # JOB 11 — Final Gate
   # ════════════════════════════════════════════════════════════════════════════
   all-clear:
     name: "All Clear ✅"
@@ -634,7 +629,5 @@ jobs:
               failed=1
             fi
           done
-          if [[ $failed -eq 1 ]]; then
-            exit 1
-          fi
+          if [[ $failed -eq 1 ]]; then exit 1; fi
           echo "✅ All required jobs passed."
