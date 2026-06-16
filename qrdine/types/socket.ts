@@ -5,7 +5,7 @@
 export interface SocketAuthPayload {
   userId?: string;
   restaurantId: string;
-  role: "admin" | "chef" | "customer";
+  role: "admin" | "chef" | "waiter" | "customer";
   tableId?: string;
   orderId?: string;
 }

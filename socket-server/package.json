@@ -10,6 +10,7 @@
   "dependencies": {
     "@sentry/node": "^9",
     "@socket.io/redis-adapter": "^8.3.0",
+    "jose": "^5.9.6",
     "redis": "^5.12.1",
     "socket.io": "^4.8.3"
   },
