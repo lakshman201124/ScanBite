@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { resolveStaffAuth } from "@/lib/waiter-auth";
@@ -55,7 +56,8 @@ export async function PATCH(
       where: { id: orderId },
       data: {
         status: newStatus as OrderStatus,
-        ...(cancellation_reason ? { notes: order.notes ? `${order.notes}\nCancellation: ${cancellation_reason}` : `Cancellation: ${cancellation_reason}` } : {}),
+        ...(cancellation_reason ? { notes: order.notes ? `${order.notes}
+Cancellation: ${cancellation_reason}` : `Cancellation: ${cancellation_reason}` } : {}),
       },
     });
 

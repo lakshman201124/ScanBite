@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";

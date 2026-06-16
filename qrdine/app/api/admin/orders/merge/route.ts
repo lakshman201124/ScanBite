@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -109,7 +110,8 @@ export async function POST(req: NextRequest) {
           data: {
             status: "cancelled",
             notes: o.notes
-              ? `${o.notes}\nCancellation: ${mergeReason}`
+              ? `${o.notes}
+Cancellation: ${mergeReason}`
               : `Cancellation: ${mergeReason}`,
           },
         });
