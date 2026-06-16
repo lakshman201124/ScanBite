@@ -122,6 +122,24 @@ export default defineConfig({
       testMatch: ['**/tests/edge-cases/**/*.spec.ts'],
       dependencies: ['setup'],
     },
+
+    // Integration tests (rate-limit, oversell, idempotency)
+    {
+      name: 'integration-tests',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: { cookies: [], origins: [] },
+      },
+      testMatch: ['**/tests/integration/**/*.spec.ts'],
+      dependencies: ['setup'],
+    },
+
+    // Unit tests — pure function tests (no browser, no server needed)
+    {
+      name: 'unit-tests',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: ['**/tests/unit/**/*.spec.ts'],
+    },
   ],
   webServer: {
     command: process.env.CI
