@@ -3,28 +3,35 @@ import { prisma } from "@/lib/db";
 import { redis } from "@/lib/redis";
 
 export async function GET() {
-  const checks: Record<string, "ok" | "error"> = { db: "error", redis: "error" };
-  let allOk = true;
+  const checks: Record<string, { status: string; latency_ms?: number }> = {};
 
-  // DB ping
+  // Database check with latency
+  const dbStart = performance.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
-    checks.db = "ok";
+    checks.database = { status: "ok", latency_ms: Math.round(performance.now() - dbStart) };
   } catch {
-    allOk = false;
+    checks.database = { status: "error", latency_ms: Math.round(performance.now() - dbStart) };
   }
 
-  // Redis ping
+  // Redis check with latency
+  const redisStart = performance.now();
   try {
     await redis.ping();
-    checks.redis = "ok";
+    checks.redis = { status: "ok", latency_ms: Math.round(performance.now() - redisStart) };
   } catch {
-    allOk = false;
+    checks.redis = { status: "error", latency_ms: Math.round(performance.now() - redisStart) };
   }
 
-  const status = allOk ? 200 : 503;
+  const allOk = Object.values(checks).every((c) => c.status === "ok");
+
   return NextResponse.json(
-    { status: allOk ? "healthy" : "degraded", ...checks, timestamp: new Date().toISOString() },
-    { status }
+    {
+      status: allOk ? "healthy" : "degraded",
+      checks,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    },
+    { status: allOk ? 200 : 503 }
   );
 }

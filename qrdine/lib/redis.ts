@@ -36,3 +36,10 @@ export async function invalidateMenuCache(restaurantId: string, slug: string): P
     redis.del(`menu:${slug}`),
   ]);
 }
+
+// Invalidate admin orders cache
+export async function invalidateAdminOrdersCache(restaurantId: string): Promise<void> {
+  // With 5s TTL, aggressive invalidation isn't critical, but we clean the most common key
+  await redis.del(`admin_orders:${restaurantId}:all:active:1:50`);
+}
+

@@ -22,11 +22,11 @@ export function buildBillBuffer(input: BillPrintInput): Uint8Array {
 
   const segments: number[][] = [
     CMD.INIT,
-    ...centeredLine(input.restaurant_name).map(n => [n]),
+    centeredLine(input.restaurant_name),
   ];
 
   if (input.restaurant_address) {
-    segments.push(centeredLine(input.restaurant_address.slice(0, 32)));
+    segments.push(centeredLine(input.restaurant_address.slice(0, 48)));
   }
   if (input.gstin) {
     segments.push(centeredLine(`GSTIN: ${input.gstin}`));
@@ -70,7 +70,7 @@ export function buildBillBuffer(input: BillPrintInput): Uint8Array {
 
   segments.push(
     dashes(),
-    ...boldLine(`TOTAL: Rs.${input.bill.final_amount.toFixed(2)}`).map(n => [n]),
+    boldLine(`TOTAL: Rs.${input.bill.final_amount.toFixed(2)}`),
     dashes(),
   );
 

@@ -4,6 +4,7 @@ import { resolveStaffAuth } from "@/lib/waiter-auth";
 import { z } from "zod";
 import { success, error } from "@/lib/api-response";
 import { emitSocketEvent } from "@/lib/socket-emitter";
+import { invalidateAdminOrdersCache } from "@/lib/redis";
 import type { OrderStatus } from "@/types";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -88,6 +89,8 @@ export async function PATCH(
       },
     });
 
+    await invalidateAdminOrdersCache(restaurantId);
+
     return success({ orderId, status: newStatus });
   } catch (err) {
     console.error("[PATCH /api/admin/orders/[id]/status]", err);
@@ -111,6 +114,7 @@ export async function GET(
       include: {
         items: true,
         table: { select: { table_number: true } },
+        restaurant: { select: { name: true } },
       },
     });
     if (!order) return error("Order not found", 404);
@@ -120,6 +124,7 @@ export async function GET(
       orderNumber: order.order_number,
       status: order.status,
       tableName: `Table ${order.table?.table_number ?? "?"}`,
+      restaurantName: order.restaurant?.name ?? "",
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
       items: order.items,

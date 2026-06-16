@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { KDSGrid } from "@/components/kds/KDSGrid";
 import type { LiveOrder } from "@/hooks/useOrderUpdates";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const CHEF_JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "fallback-secret"
-);
+const CHEF_JWT_SECRET = getAuthSecretKey();
 
 async function getChefContext(): Promise<{ restaurantId: string; restaurantName: string } | null> {
   const cookieStore = await cookies();
@@ -64,7 +63,7 @@ async function getKitchenOrders(restaurantId: string): Promise<LiveOrder[]> {
 
 export default async function KDSPage() {
   const ctx = await getChefContext();
-  if (!ctx) redirect("/chef-login");
+  if (!ctx) redirect("/staff-login");
 
   const initialOrders = await getKitchenOrders(ctx.restaurantId);
 

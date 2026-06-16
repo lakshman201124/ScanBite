@@ -5,12 +5,11 @@ import { jwtVerify } from "jose";
 import type { NextAuthRequest } from "next-auth";
 import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
+import { getAuthSecretKey } from "@/lib/secret";
 
 const { auth } = NextAuth(authConfig);
 
-const CHEF_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "fallback-secret"
-);
+const CHEF_SECRET = getAuthSecretKey();
 
 async function verifyChefJWT(token: string) {
   try {
@@ -46,7 +45,7 @@ const orderRatelimit = new Ratelimit({
 export const proxy = auth(async function proxy(req: NextAuthRequest) {
   const { pathname } = req.nextUrl;
   const session = req.auth;
-  const ip = (req as any).ip ?? req.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "127.0.0.1";
 
   // 1. Rate limiting for OTP send API (Must run before general auth bypass)
   if (pathname === "/api/auth/otp/send") {
@@ -164,46 +163,84 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
     return response;
   }
 
-  // Chef KDS + Waiter Staff panel + /api/chef
-  if (pathname.startsWith("/kds") || pathname.startsWith("/staff") || pathname.startsWith("/api/chef")) {
+  // ── /kds/* and /api/chef/* — require chef role ────────────────────────
+  if (pathname.startsWith("/kds") || pathname.startsWith("/api/chef")) {
     const chefToken = req.cookies.get("chef_token")?.value;
-    if (!chefToken) {
-      // API routes → 401 JSON; page routes → redirect
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (chefToken) {
+      const payload = await verifyChefJWT(chefToken);
+      if (payload?.restaurantId) {
+        if ((payload.role as string) === "waiter") {
+          return NextResponse.redirect(new URL("/waiter", req.url));
+        }
+        const response = NextResponse.next();
+        response.headers.set("x-restaurant-id", payload.restaurantId as string);
+        response.headers.set("x-user-id", (payload.sub as string) ?? "");
+        response.headers.set("x-user-role", (payload.role as string) ?? "chef");
+        return response;
       }
-      return NextResponse.redirect(new URL("/chef-login", req.url));
     }
-    const payload = await verifyChefJWT(chefToken);
-    if (!payload?.restaurantId) {
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
-      }
-      const res = NextResponse.redirect(new URL("/chef-login", req.url));
-      res.cookies.delete("chef_token");
-      return res;
+    // Admin can supervise KDS
+    if (session?.user?.restaurantId && (session.user.role === "admin" || session.user.role === "super_admin")) {
+      const response = NextResponse.next();
+      response.headers.set("x-restaurant-id", session.user.restaurantId);
+      response.headers.set("x-user-id", session.user.id ?? "");
+      response.headers.set("x-user-role", session.user.role as string);
+      return response;
     }
-    const response = NextResponse.next();
-    response.headers.set("x-restaurant-id", payload.restaurantId as string);
-    response.headers.set("x-user-role", (payload.role as string) ?? "chef");
-    return response;
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/staff-login", req.url));
   }
 
-  // Redirect authenticated users away from auth pages
+  // ── /waiter/* and /api/waiter/* — require waiter role ──────────────────
+  if (pathname.startsWith("/waiter") || pathname.startsWith("/api/waiter")) {
+    const chefToken = req.cookies.get("chef_token")?.value;
+    if (chefToken) {
+      const payload = await verifyChefJWT(chefToken);
+      if (payload?.restaurantId) {
+        if ((payload.role as string) === "chef") {
+          return NextResponse.redirect(new URL("/kds", req.url));
+        }
+        const response = NextResponse.next();
+        response.headers.set("x-restaurant-id", payload.restaurantId as string);
+        response.headers.set("x-user-id", (payload.sub as string) ?? "");
+        response.headers.set("x-user-role", (payload.role as string) ?? "waiter");
+        return response;
+      }
+    }
+    // Admin can supervise waiter panel
+    if (session?.user?.restaurantId && (session.user.role === "admin" || session.user.role === "super_admin")) {
+      const response = NextResponse.next();
+      response.headers.set("x-restaurant-id", session.user.restaurantId);
+      response.headers.set("x-user-id", session.user.id ?? "");
+      response.headers.set("x-user-role", session.user.role as string);
+      return response;
+    }
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/staff-login", req.url));
+  }
+
+  // ── Redirect authenticated users away from auth pages ──────────────────
   if (pathname === "/login" || pathname === "/signup") {
     if (session?.user?.restaurantId) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
 
-  if (pathname === "/chef-login") {
+  if (pathname === "/staff-login" || pathname === "/chef-login") {
     const chefToken = req.cookies.get("chef_token")?.value;
     if (chefToken) {
       const payload = await verifyChefJWT(chefToken);
       if (payload?.role) {
-        const dest = payload.role === "waiter" ? "/staff" : "/kds";
+        const dest = (payload.role as string) === "waiter" ? "/waiter" : "/kds";
         return NextResponse.redirect(new URL(dest, req.url));
       }
+    }
+    if (session?.user?.restaurantId) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
 
@@ -215,12 +252,14 @@ export const config = {
     "/dashboard/:path*",
     "/onboarding",
     "/kds/:path*",
-    "/staff/:path*",
+    "/waiter/:path*",
     "/login",
     "/signup",
+    "/staff-login",
     "/chef-login",
     "/api/admin/:path*",
     "/api/chef/:path*",
+    "/api/waiter/:path*",
     "/api/auth/otp/send",
     "/api/customer/orders",
   ],

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { success, error } from "@/lib/api-response";
+import { redis } from "@/lib/redis";
 
 import { OrderStatus, Prisma } from "@prisma/client";
 
@@ -26,6 +27,19 @@ export async function GET(request: NextRequest) {
     const page     = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
     const limit    = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50")));
     const skip     = (page - 1) * limit;
+
+    const cacheKey = `admin_orders:${restaurantId}:${tableId || 'all'}:${status || 'all'}:${page}:${limit}`;
+
+    try {
+      const cached = await redis.get<any[]>(cacheKey);
+      if (cached) {
+        const response = success(cached);
+        response.headers.set("X-Cache", "HIT");
+        return response;
+      }
+    } catch (redisErr) {
+      console.error("[redis cache error]", redisErr);
+    }
 
     const where: Prisma.OrderWhereInput = { restaurant_id: restaurantId };
     if (tableId) where.table_id = tableId;
@@ -77,7 +91,15 @@ export async function GET(request: NextRequest) {
       updatedAt: o.updated_at.toISOString(),
     }));
 
-    return success(data);
+    try {
+      await redis.setex(cacheKey, 5, JSON.stringify(data)); // 5-second TTL
+    } catch (redisErr) {
+      console.error("[redis cache set error]", redisErr);
+    }
+
+    const response = success(data);
+    response.headers.set("X-Cache", "MISS");
+    return response;
   } catch (err) {
     console.error("[GET /api/admin/orders]", err);
     return error("Failed to fetch orders", 500);

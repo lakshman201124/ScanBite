@@ -1,8 +1,9 @@
 import { jwtVerify } from "jose";
 import type { Socket } from "socket.io";
 import type { SocketAuthPayload, ServerToClientEvents, ClientToServerEvents, InterServerEvents, SocketData } from "./types";
+import { getAuthSecretKey } from "./secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-dev-secret-change-in-prod");
+const JWT_SECRET = getAuthSecretKey();
 
 export async function authenticateSocket(
   socket: Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>

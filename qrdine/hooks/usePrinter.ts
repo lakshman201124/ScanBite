@@ -10,14 +10,16 @@ declare global {
       requestDevice(options: object): Promise<BluetoothDevice>;
     };
   }
+  interface BluetoothRemoteGATTServer {
+    connected: boolean;
+    connect(): Promise<BluetoothRemoteGATTServer>;
+    disconnect(): void;
+    getPrimaryService(uuid: string): Promise<BluetoothRemoteGATTService>;
+  }
   interface BluetoothDevice {
     name?: string;
-    gatt?: {
-      connect(): Promise<BluetoothRemoteGATTServer>;
-    };
-  }
-  interface BluetoothRemoteGATTServer {
-    getPrimaryService(uuid: string): Promise<BluetoothRemoteGATTService>;
+    gatt?: BluetoothRemoteGATTServer;
+    addEventListener(event: "gattserverdisconnected", listener: () => void): void;
   }
   interface BluetoothRemoteGATTService {
     getCharacteristic(uuid: string): Promise<BluetoothRemoteGATTCharacteristic>;
@@ -51,15 +53,23 @@ export function usePrinter() {
   const isSupported = typeof navigator !== "undefined" && !!navigator.bluetooth;
 
   async function getChar(): Promise<BluetoothRemoteGATTCharacteristic> {
-    if (charRef.current) return charRef.current;
+    if (charRef.current && deviceRef.current?.gatt?.connected) return charRef.current;
+    charRef.current = null;
+
     if (!navigator.bluetooth) throw new Error("Web Bluetooth not supported on this browser");
 
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [PRINTER_SERVICE] }],
-      optionalServices: [PRINTER_SERVICE],
-    });
-    deviceRef.current = device;
-    const server = await device.gatt!.connect();
+    if (!deviceRef.current) {
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [PRINTER_SERVICE] }],
+      });
+      deviceRef.current = device;
+      device.addEventListener("gattserverdisconnected", () => {
+        charRef.current = null;
+      });
+    }
+
+    if (!deviceRef.current.gatt) throw new Error("Bluetooth GATT server not available on this device");
+    const server = await deviceRef.current.gatt.connect();
     const service = await server.getPrimaryService(PRINTER_SERVICE);
     const char = await service.getCharacteristic(PRINTER_CHAR);
     charRef.current = char;
@@ -96,6 +106,9 @@ export function usePrinter() {
   }, [printBuffer]);
 
   const forgetPrinter = useCallback(() => {
+    if (deviceRef.current?.gatt?.connected) {
+      try { deviceRef.current.gatt.disconnect(); } catch { /* ignore */ }
+    }
     deviceRef.current = null;
     charRef.current = null;
   }, []);

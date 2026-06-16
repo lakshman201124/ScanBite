@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { DailySummary } from "@/components/billing/DailySummary";
 import { BillsList } from "@/components/billing/BillsList";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const JWT_SECRET = getAuthSecretKey();
 
 async function getWaiterContext() {
   const cookieStore = await cookies();
@@ -58,7 +59,7 @@ async function getDailySummary(restaurantId: string) {
 
 export default async function WaiterBillingPage() {
   const ctx = await getWaiterContext();
-  if (!ctx) redirect("/chef-login");
+  if (!ctx) redirect("/staff-login");
 
   const summary = await getDailySummary(ctx.restaurantId);
 

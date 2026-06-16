@@ -23,6 +23,7 @@ interface Restaurant {
   cgst_rate: number | string | null;
   sgst_rate: number | string | null;
   plan: string;
+  staff_login_code?: string | null;
 }
 
 interface StaffMember {
@@ -67,14 +68,24 @@ type BrandForm   = z.infer<typeof brandSchema>;
 type TaxForm     = z.infer<typeof taxSchema>;
 type StaffForm   = z.infer<typeof staffSchema>;
 
+const staffAddSchema = z.object({
+  name:        z.string().min(2, "At least 2 characters").max(100),
+  phone:       z.string().regex(/^\+?[0-9]{10,15}$/, "Invalid phone"),
+  role:        z.enum(["chef", "waiter"]),
+  email:       z.string().email("Invalid email").optional().or(z.literal("")),
+  otp_code:    z.string().length(6, "Enter 6-digit OTP"),
+  pin:         z.string().length(6, "PIN must be 6 digits").regex(/^\d{6}$/, "Digits only"),
+  confirm_pin: z.string().length(6, "Confirm your PIN"),
+}).refine(d => d.pin === d.confirm_pin, { message: "PINs don't match", path: ["confirm_pin"] });
+type StaffAddForm = z.infer<typeof staffAddSchema>;
+
 /* ═══════════════════════ CONSTANTS ═══════════════════════ */
 const TABS = [
-  { id: "profile",  label: "Restaurant",     ico: "" },
-  { id: "branding", label: "Branding",        ico: "" },
-  { id: "tax",      label: "Tax & Billing",   ico: "" },
-  { id: "staff",    label: "Staff",           ico: "" },
-  { id: "printer",  label: "Hardware",        ico: "️" },
-  { id: "plan",     label: "Plan",            ico: "⭐" },
+  { id: "profile",  label: "Restaurant"   },
+  { id: "branding", label: "Branding"     },
+  { id: "tax",      label: "Tax & Billing"},
+  { id: "staff",    label: "Staff"        },
+  { id: "printer",  label: "Hardware"     },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -215,42 +226,47 @@ function ProfileTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <Card>
-        <CardHead title="Restaurant Profile" sub="Appears on customer menus and receipts." />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 20px" }}>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Lbl required>Restaurant Name</Lbl>
-            <Inp {...register("name")} error={!!errors.name} placeholder="e.g. Spice Garden" />
-            <Err msg={errors.name?.message} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <Card>
+          <CardHead title="Restaurant Profile" sub="Appears on customer menus and receipts." />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 20px" }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Lbl required>Restaurant Name</Lbl>
+              <Inp {...register("name")} error={!!errors.name} placeholder="e.g. Spice Garden" />
+              <Err msg={errors.name?.message} />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Lbl>Address</Lbl>
+              <Textarea {...register("address")} error={!!errors.address} placeholder="Street, Area, City, State, PIN" />
+              <Err msg={errors.address?.message} />
+            </div>
+            <div>
+              <Lbl>Phone Number</Lbl>
+              <Inp {...register("phone")} error={!!errors.phone} placeholder="+91 98765 43210" />
+              <Err msg={errors.phone?.message} />
+            </div>
+            <div>
+              <Lbl>GSTIN</Lbl>
+              <Inp {...register("gstin")} error={!!errors.gstin} placeholder="22AAAAA0000A1Z5"
+                style={{ fontFamily: "var(--mono)", letterSpacing: ".04em" }}
+                onChange={e => { e.target.value = e.target.value.toUpperCase(); register("gstin").onChange(e); }}
+              />
+              <Err msg={errors.gstin?.message} />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Lbl>Logo URL</Lbl>
+              <Inp {...register("logo_url")} error={!!errors.logo_url} placeholder="https://cdn.example.com/logo.png" />
+              <Err msg={errors.logo_url?.message} />
+            </div>
           </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Lbl>Address</Lbl>
-            <Textarea {...register("address")} error={!!errors.address} placeholder="Street, Area, City, State, PIN" />
-            <Err msg={errors.address?.message} />
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--hairline-2)", display: "flex", justifyContent: "flex-end" }}>
+            <SaveBtn loading={saving} />
           </div>
-          <div>
-            <Lbl>Phone Number</Lbl>
-            <Inp {...register("phone")} error={!!errors.phone} placeholder="+91 98765 43210" />
-            <Err msg={errors.phone?.message} />
-          </div>
-          <div>
-            <Lbl>GSTIN</Lbl>
-            <Inp {...register("gstin")} error={!!errors.gstin} placeholder="22AAAAA0000A1Z5"
-              style={{ fontFamily: "var(--mono)", letterSpacing: ".04em" }}
-              onChange={e => { e.target.value = e.target.value.toUpperCase(); register("gstin").onChange(e); }}
-            />
-            <Err msg={errors.gstin?.message} />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Lbl>Logo URL</Lbl>
-            <Inp {...register("logo_url")} error={!!errors.logo_url} placeholder="https://cdn.example.com/logo.png" />
-            <Err msg={errors.logo_url?.message} />
-          </div>
-        </div>
-        <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--hairline-2)", display: "flex", justifyContent: "flex-end" }}>
-          <SaveBtn loading={saving} />
-        </div>
-      </Card>
+        </Card>
+
+        {/* Staff Login Code — feature card */}
+        <StaffLoginCodeInline />
+      </div>
     </form>
   );
 }
@@ -486,10 +502,18 @@ function TaxTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: () =
 /* ═══════════════════════ TAB: STAFF ═══════════════════════ */
 function StaffTab() {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm]       = useState(false);
-  const [saving,   setSaving]         = useState(false);
-  const [editId,   setEditId]         = useState<string | null>(null);
-  const [deleteId, setDeleteId]       = useState<string | null>(null);
+  const [showForm,      setShowForm]      = useState(false);
+  const [addStep,       setAddStep]       = useState<"details" | "verify">("details");
+  const [sendingOtp,    setSendingOtp]    = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [pendingId,     setPendingId]     = useState<string | null>(null);
+  const [deleteId,      setDeleteId]      = useState<string | null>(null);
+  const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
+  const [editSaving,    setEditSaving]    = useState(false);
+  const [showPinReset,  setShowPinReset]  = useState(false);
+  const [newPin,        setNewPin]        = useState("");
+  const [confirmNewPin, setConfirmNewPin] = useState("");
+  const [pinResetErr,   setPinResetErr]   = useState("");
 
   const { data: staff = [], isLoading, error } = useQuery<StaffMember[]>({
     queryKey: ["settings-staff"],
@@ -497,41 +521,83 @@ function StaffTab() {
     staleTime: 30_000,
   });
 
-  const { register, handleSubmit, formState: { errors }, reset: resetForm } = useForm<StaffForm>({
+  const { register, handleSubmit, formState: { errors }, reset: resetForm, trigger, getValues } = useForm<StaffAddForm>({
+    resolver: zodResolver(staffAddSchema),
+    defaultValues: { name: "", phone: "", role: "chef", email: "", otp_code: "", pin: "", confirm_pin: "" },
+  });
+
+  const { register: regEdit, handleSubmit: handleEditSubmit, formState: { errors: editErrs }, reset: resetEditForm } = useForm<StaffForm>({
     resolver: zodResolver(staffSchema),
     defaultValues: { name: "", phone: "", role: "chef", email: "" },
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["settings-staff"] });
 
-  const addStaff = async (data: StaffForm) => {
+  const sendOtp = async () => {
+    const valid = await trigger(["name", "phone", "role"]);
+    if (!valid) return;
+    setSendingOtp(true);
+    try {
+      await apiFetch("/api/auth/otp/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: getValues("phone"), type: "staff_signup" }) });
+      toast.success("OTP sent to staff's phone via WhatsApp");
+      setAddStep("verify");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to send OTP"); }
+    finally { setSendingOtp(false); }
+  };
+
+  const addStaff = async (data: StaffAddForm) => {
     setSaving(true);
     try {
-      await apiFetch("/api/admin/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      await apiFetch("/api/admin/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: data.name, phone: data.phone, role: data.role, email: data.email, otp_code: data.otp_code, pin: data.pin }) });
       toast.success(`${data.name} added`);
-      invalidate(); resetForm(); setShowForm(false);
+      invalidate(); resetForm(); setShowForm(false); setAddStep("details");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setSaving(false); }
   };
 
   const toggleActive = async (member: StaffMember) => {
-    setEditId(member.id);
+    setPendingId(member.id);
     try {
       await apiFetch("/api/admin/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: member.id, is_active: !member.is_active }) });
       toast.success(member.is_active ? `${member.name} deactivated` : `${member.name} activated`);
       invalidate();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-    finally { setEditId(null); }
+    finally { setPendingId(null); }
   };
 
   const removeStaff = async (id: string) => {
-    setEditId(id);
+    setPendingId(id);
     try {
       await apiFetch(`/api/admin/staff?id=${id}`, { method: "DELETE" });
-      toast.success("Removed");
+      toast.success("Staff member deleted");
       invalidate(); setDeleteId(null);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-    finally { setEditId(null); }
+    finally { setPendingId(null); }
+  };
+
+  const startEdit = (member: StaffMember) => {
+    setEditingMember(member);
+    resetEditForm({ name: member.name, phone: member.phone ?? "", role: member.role, email: "" });
+    setShowPinReset(false); setNewPin(""); setConfirmNewPin(""); setPinResetErr("");
+  };
+
+  const saveEdit = async (data: StaffForm) => {
+    if (!editingMember) return;
+    if (showPinReset) {
+      if (!/^\d{6}$/.test(newPin)) { setPinResetErr("PIN must be exactly 6 digits"); return; }
+      if (newPin !== confirmNewPin) { setPinResetErr("PINs don't match"); return; }
+    }
+    setEditSaving(true);
+    try {
+      const payload: Record<string, unknown> = { id: editingMember.id, name: data.name, phone: data.phone, role: data.role };
+      if (showPinReset && newPin) payload.pin = newPin;
+      await apiFetch("/api/admin/staff", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      toast.success(`${data.name} updated`);
+      invalidate();
+      setEditingMember(null);
+      setShowPinReset(false); setNewPin(""); setConfirmNewPin(""); setPinResetErr("");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setEditSaving(false); }
   };
 
   const active  = staff.filter(s => s.is_active).length;
@@ -558,7 +624,7 @@ function StaffTab() {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <CardHead title="Staff Management" sub="Chefs and waiters log in with their phone number." />
-          <button type="button" onClick={() => { setShowForm(v => !v); resetForm(); }}
+          <button type="button" onClick={() => { setShowForm(v => !v); resetForm(); setAddStep("details"); }}
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               padding: "9px 18px", borderRadius: 999, border: "none", cursor: "pointer",
@@ -577,28 +643,76 @@ function StaffTab() {
           </button>
         </div>
 
-        {/* Add form */}
+        {/* Add form — 2-step: details → verify+PIN */}
         <AnimatePresence>
           {showForm && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: .22, ease: [0.16,1,0.3,1] }} style={{ overflow: "hidden" }}>
               <form onSubmit={handleSubmit(addStaff)}>
                 <div style={{ background: "var(--brand-tint)", border: "1.5px solid rgba(255,77,61,.15)", borderRadius: 14, padding: "18px 20px", marginBottom: 20 }}>
-                  <p style={{ margin: "0 0 14px", font: "700 12px var(--sans)", color: "var(--brand)" }}>New Staff Member</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 130px", gap: 12 }}>
-                    <div><Lbl required>Full Name</Lbl><Inp {...register("name")} error={!!errors.name} placeholder="Rajan Kumar" /><Err msg={errors.name?.message} /></div>
-                    <div><Lbl required>Phone</Lbl><Inp {...register("phone")} error={!!errors.phone} placeholder="+91 98765 43210" /><Err msg={errors.phone?.message} /></div>
-                    <div>
-                      <Lbl required>Role</Lbl>
-                      <select {...register("role")} style={{ width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1.5px solid var(--hairline)", borderRadius: 10, font: "500 13px var(--sans)", color: "var(--ink)", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6A75' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: 14 }}>
-                        <option value="chef">Chef</option>
-                        <option value="waiter">Waiter</option>
-                      </select>
+                  {/* Step header + progress */}
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
+                    <p style={{ margin: 0, font: "700 12px var(--sans)", color: "var(--brand)" }}>
+                      {addStep === "details" ? "1 — Staff Details" : "2 — Verify & Set PIN"}
+                    </p>
+                    <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+                      <div style={{ width: 20, height: 4, borderRadius: 2, background: "var(--brand)" }} />
+                      <div style={{ width: 20, height: 4, borderRadius: 2, background: addStep === "verify" ? "var(--brand)" : "rgba(255,77,61,.22)", transition: "background .2s" }} />
                     </div>
-                    <div style={{ gridColumn: "1 / -1" }}><Lbl>Email (optional)</Lbl><Inp {...register("email")} error={!!errors.email} placeholder="staff@restaurant.com" /><Err msg={errors.email?.message} /></div>
                   </div>
-                  <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
-                    <SaveBtn loading={saving} label="Add to team" />
-                  </div>
+
+                  {addStep === "details" ? (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 130px", gap: 12 }}>
+                        <div><Lbl required>Full Name</Lbl><Inp {...register("name")} error={!!errors.name} placeholder="Rajan Kumar" /><Err msg={errors.name?.message} /></div>
+                        <div><Lbl required>Phone</Lbl><Inp {...register("phone")} error={!!errors.phone} placeholder="+91 98765 43210" /><Err msg={errors.phone?.message} /></div>
+                        <div>
+                          <Lbl required>Role</Lbl>
+                          <select {...register("role")} style={{ width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1.5px solid var(--hairline)", borderRadius: 10, font: "500 13px var(--sans)", color: "var(--ink)", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6A75' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: 14 }}>
+                            <option value="chef">Chef</option>
+                            <option value="waiter">Waiter</option>
+                          </select>
+                        </div>
+                        <div style={{ gridColumn: "1 / -1" }}><Lbl>Email (optional)</Lbl><Inp {...register("email")} error={!!errors.email} placeholder="staff@restaurant.com" /><Err msg={errors.email?.message} /></div>
+                      </div>
+                      <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+                        <button type="button" onClick={sendOtp} disabled={sendingOtp}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 22px", borderRadius: 999, background: sendingOtp ? "var(--muted-2)" : "var(--brand)", color: "#fff", border: "none", cursor: sendingOtp ? "not-allowed" : "pointer", font: "700 12.5px var(--sans)", boxShadow: sendingOtp ? "none" : "0 8px 24px -8px rgba(255,77,61,.55)", transition: "background .15s" }}>
+                          {sendingOtp && <span style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "sbSpin .7s linear infinite" }} />}
+                          {sendingOtp ? "Sending OTP…" : "Send OTP →"}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ padding: "9px 13px", background: "rgba(255,77,61,.07)", border: "1px solid rgba(255,77,61,.15)", borderRadius: 10, marginBottom: 14, font: "500 12px var(--sans)", color: "var(--ink-2)" }}>
+                        OTP sent to <strong style={{ fontFamily: "var(--mono)" }}>{getValues("phone")}</strong> via WhatsApp — give it to the staff member.
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        <div>
+                          <Lbl required>OTP Code</Lbl>
+                          <Inp {...register("otp_code")} error={!!errors.otp_code} placeholder="6-digit code" maxLength={6} inputMode="numeric" style={{ fontFamily: "var(--mono)", letterSpacing: ".14em", textAlign: "center" }} />
+                          <Err msg={errors.otp_code?.message} />
+                        </div>
+                        <div>
+                          <Lbl required>Set PIN</Lbl>
+                          <Inp {...register("pin")} type="password" error={!!errors.pin} placeholder="6 digits" maxLength={6} inputMode="numeric" style={{ letterSpacing: ".1em" }} />
+                          <Err msg={errors.pin?.message} />
+                        </div>
+                        <div>
+                          <Lbl required>Confirm PIN</Lbl>
+                          <Inp {...register("confirm_pin")} type="password" error={!!errors.confirm_pin} placeholder="6 digits" maxLength={6} inputMode="numeric" style={{ letterSpacing: ".1em" }} />
+                          <Err msg={errors.confirm_pin?.message} />
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <button type="button" onClick={() => setAddStep("details")}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "9px 16px", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--hairline)", font: "600 12px var(--sans)", color: "var(--ink-2)", cursor: "pointer" }}>
+                          ← Back
+                        </button>
+                        <SaveBtn loading={saving} label="Add to team" />
+                      </div>
+                    </>
+                  )}
                 </div>
               </form>
             </motion.div>
@@ -620,11 +734,11 @@ function StaffTab() {
           </div>
         ) : (
           <div style={{ border: "1px solid var(--hairline)", borderRadius: 14, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 150px 110px 70px 90px", padding: "9px 16px", background: "var(--bg)", borderBottom: "1px solid var(--hairline)", font: "700 10px var(--sans)", color: "var(--muted)", letterSpacing: ".06em", textTransform: "uppercase" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 150px 110px 70px 124px", padding: "9px 16px", background: "var(--bg)", borderBottom: "1px solid var(--hairline)", font: "700 10px var(--sans)", color: "var(--muted)", letterSpacing: ".06em", textTransform: "uppercase" }}>
               <span>Member</span><span>Phone</span><span>Role</span><span>Status</span><span style={{ textAlign: "right" }}>Actions</span>
             </div>
             {staff.map((m, i) => (
-              <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 150px 110px 70px 90px", padding: "13px 16px", alignItems: "center", borderBottom: i < staff.length - 1 ? "1px solid var(--hairline-2)" : "none", background: m.is_active ? "var(--surface)" : "var(--bg)", opacity: editId === m.id ? .5 : 1, transition: "opacity .15s" }}>
+              <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 150px 110px 70px 124px", padding: "13px 16px", alignItems: "center", borderBottom: i < staff.length - 1 ? "1px solid var(--hairline-2)" : "none", background: m.is_active ? "var(--surface)" : "var(--bg)", opacity: pendingId === m.id ? .5 : 1, transition: "opacity .15s" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: "50%", background: m.role === "chef" ? "var(--brand-tint)" : "#EEF4FF", color: m.role === "chef" ? "var(--brand)" : "var(--blue)", display: "grid", placeItems: "center", font: "800 12px var(--sans)", flexShrink: 0 }}>
                     {m.name.charAt(0).toUpperCase()}
@@ -643,6 +757,13 @@ function StaffTab() {
                   {m.is_active ? "On" : "Off"}
                 </span>
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                  <button type="button" onClick={() => startEdit(m)} title="Edit"
+                    style={{ width: 28, height: 28, borderRadius: 8, background: "var(--bg)", border: "1px solid var(--hairline)", display: "grid", placeItems: "center", cursor: "pointer", color: "var(--muted)" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--surface-2)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--ink)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bg)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--muted)"; }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
                   <button type="button" onClick={() => toggleActive(m)} title={m.is_active ? "Deactivate" : "Activate"}
                     style={{ width: 28, height: 28, borderRadius: 8, background: "var(--bg)", border: "1px solid var(--hairline)", display: "grid", placeItems: "center", cursor: "pointer", color: m.is_active ? "var(--muted)" : "var(--green)" }}>
                     {m.is_active
@@ -650,7 +771,7 @@ function StaffTab() {
                       : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     }
                   </button>
-                  <button type="button" onClick={() => setDeleteId(m.id)} title="Remove"
+                  <button type="button" onClick={() => setDeleteId(m.id)} title="Delete"
                     style={{ width: 28, height: 28, borderRadius: 8, background: "var(--bg)", border: "1px solid var(--hairline)", display: "grid", placeItems: "center", cursor: "pointer", color: "var(--red)" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                   </button>
@@ -661,7 +782,7 @@ function StaffTab() {
         )}
       </Card>
 
-      {/* Confirm remove overlay */}
+      {/* Confirm delete overlay */}
       <AnimatePresence>
         {deleteId && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -672,12 +793,85 @@ function StaffTab() {
               onClick={e => e.stopPropagation()}
               style={{ background: "var(--surface)", borderRadius: 20, padding: "28px 32px", maxWidth: 360, width: "90%", boxShadow: "var(--sh-3)" }}
             >
-              <div style={{ font: "700 16px var(--sans)", marginBottom: 8 }}>Remove staff member?</div>
-              <p style={{ font: "500 13px var(--sans)", color: "var(--muted)", margin: "0 0 22px", lineHeight: 1.6 }}>Their account will be deactivated and they will lose login access immediately.</p>
+              <div style={{ font: "700 16px var(--sans)", marginBottom: 8 }}>Delete staff member?</div>
+              <p style={{ font: "500 13px var(--sans)", color: "var(--muted)", margin: "0 0 22px", lineHeight: 1.6 }}>This will permanently delete their account. They will lose login access immediately and this cannot be undone.</p>
               <div style={{ display: "flex", gap: 10 }}>
                 <button type="button" onClick={() => setDeleteId(null)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--hairline)", font: "600 12px var(--sans)", cursor: "pointer" }}>Cancel</button>
-                <button type="button" onClick={() => removeStaff(deleteId)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: "var(--red)", color: "#fff", border: "none", font: "700 12px var(--sans)", cursor: "pointer" }}>Remove</button>
+                <button type="button" onClick={() => removeStaff(deleteId)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: "var(--red)", color: "#fff", border: "none", font: "700 12px var(--sans)", cursor: "pointer" }}>Delete</button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit staff modal */}
+      <AnimatePresence>
+        {editingMember && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: "fixed", inset: 0, background: "rgba(20,19,26,.45)", backdropFilter: "blur(4px)", zIndex: 100, display: "grid", placeItems: "center" }}
+            onClick={() => setEditingMember(null)}
+          >
+            <motion.div initial={{ scale: .92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: .92, y: 12 }} transition={{ type: "spring", stiffness: 380, damping: 24 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: "var(--surface)", borderRadius: 20, padding: "28px 32px", maxWidth: 440, width: "90%", boxShadow: "var(--sh-3)" }}
+            >
+              <div style={{ font: "700 16px var(--sans)", marginBottom: 20 }}>Edit Staff Member</div>
+              <form onSubmit={handleEditSubmit(saveEdit)}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <Lbl required>Full Name</Lbl>
+                    <Inp {...regEdit("name")} error={!!editErrs.name} placeholder="Rajan Kumar" />
+                    <Err msg={editErrs.name?.message} />
+                  </div>
+                  <div>
+                    <Lbl required>Phone</Lbl>
+                    <Inp {...regEdit("phone")} error={!!editErrs.phone} placeholder="+91 98765 43210" />
+                    <Err msg={editErrs.phone?.message} />
+                  </div>
+                  <div>
+                    <Lbl required>Role</Lbl>
+                    <select {...regEdit("role")} style={{ width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1.5px solid var(--hairline)", borderRadius: 10, font: "500 13px var(--sans)", color: "var(--ink)", outline: "none", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6A75' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", backgroundSize: 14 }}>
+                      <option value="chef">Chef</option>
+                      <option value="waiter">Waiter</option>
+                    </select>
+                    <Err msg={editErrs.role?.message} />
+                  </div>
+                </div>
+                {/* PIN reset */}
+                <div style={{ borderTop: "1px solid var(--hairline)", paddingTop: 14, marginTop: 6 }}>
+                  <button type="button"
+                    onClick={() => { setShowPinReset(v => !v); setPinResetErr(""); setNewPin(""); setConfirmNewPin(""); }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6, font: "600 12px var(--sans)", color: showPinReset ? "var(--muted)" : "var(--brand)", background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: showPinReset ? 12 : 0 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      {showPinReset
+                        ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+                        : <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>
+                      }
+                    </svg>
+                    {showPinReset ? "Cancel PIN reset" : "Reset PIN"}
+                  </button>
+                  {showPinReset && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <Lbl required>New PIN</Lbl>
+                        <Inp value={newPin} onChange={e => { setNewPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setPinResetErr(""); }} type="password" placeholder="6 digits" maxLength={6} inputMode="numeric" error={!!pinResetErr} style={{ letterSpacing: ".1em" }} />
+                      </div>
+                      <div>
+                        <Lbl required>Confirm PIN</Lbl>
+                        <Inp value={confirmNewPin} onChange={e => { setConfirmNewPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setPinResetErr(""); }} type="password" placeholder="6 digits" maxLength={6} inputMode="numeric" error={!!pinResetErr} style={{ letterSpacing: ".1em" }} />
+                      </div>
+                      {pinResetErr && <div style={{ gridColumn: "1 / -1" }}><Err msg={pinResetErr} /></div>}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                  <button type="button" onClick={() => setEditingMember(null)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--hairline)", font: "600 12px var(--sans)", cursor: "pointer" }}>Cancel</button>
+                  <button type="submit" disabled={editSaving} style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: editSaving ? "var(--muted-2)" : "var(--brand)", color: "#fff", border: "none", font: "700 12px var(--sans)", cursor: editSaving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                    {editSaving && <span style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "sbSpin .7s linear infinite" }} />}
+                    {editSaving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
@@ -690,14 +884,47 @@ function StaffTab() {
 function PrinterTab() {
   const [paired,    setPaired]    = useState<string | null>(null);
   const [scanning,  setScanning]  = useState(false);
-  const [found,     setFound]     = useState<string[]>([]);
+  const [found,     setFound]     = useState<Array<{ name: string; id: string }>>([]);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [printing,  setPrinting]  = useState(false);
 
   useEffect(() => { const s = localStorage.getItem("paired_printer"); if (s) setPaired(s); }, []);
 
-  const scan = () => {
-    setScanning(true); setFound([]);
-    setTimeout(() => { setFound(["TVS RP-3200", "Epson TM-T88VI", "Rugtek RP-80"]); setScanning(false); }, 1800);
+  const scan = async () => {
+    setScanning(true);
+    setFound([]);
+    setScanError(null);
+
+    if (!navigator.bluetooth) {
+      setScanError("Bluetooth printing requires Chrome on Android or desktop. Please open this page on your restaurant tablet.");
+      setScanning(false);
+      return;
+    }
+
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [
+          "000018f0-0000-1000-8000-00805f9b34fb",
+          "49535343-fe7d-4ae5-8fa9-9fafd205e455",
+          "0000ff00-0000-1000-8000-00805f9b34fb",
+        ],
+      });
+      if (device) {
+        const d = device as BluetoothDevice & { id?: string };
+        setFound([{ name: d.name || "Unknown Printer", id: d.id ?? d.name ?? "unknown" }]);
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "NotFoundError") {
+        setScanError("No printer selected. Please try again and select your printer from the list.");
+      } else if (err instanceof Error && err.name === "SecurityError") {
+        setScanError("Bluetooth permission denied. Please allow Bluetooth access in your browser.");
+      } else {
+        setScanError("Bluetooth scan failed. Make sure your printer is powered on and in pairing mode.");
+      }
+    } finally {
+      setScanning(false);
+    }
   };
   const pair   = (p: string) => { setPaired(p); localStorage.setItem("paired_printer", p); setFound([]); toast.success(`Paired: ${p}`); };
   const forget = () => { setPaired(null); localStorage.removeItem("paired_printer"); toast.success("Printer removed"); };
@@ -742,16 +969,22 @@ function PrinterTab() {
             </button>
           </div>
           <AnimatePresence>
+            {scanError && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(224,58,48,.06)", border: "1px solid rgba(224,58,48,.2)", font: "500 12px var(--sans)", color: "var(--red)", lineHeight: 1.5 }}>
+                {scanError}
+              </motion.div>
+            )}
             {found.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
                 style={{ border: "1px solid var(--hairline)", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: "9px 16px", background: "var(--bg)", borderBottom: "1px solid var(--hairline)", font: "700 10px var(--sans)", color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".08em" }}>Discovered</div>
-                {found.map((p, i) => (
-                  <div key={p} onClick={() => pair(p)} style={{ padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", borderBottom: i < found.length - 1 ? "1px solid var(--hairline-2)" : "none", font: "600 13px var(--sans)" }}
+                {found.map((device, i) => (
+                  <div key={device.id} onClick={() => pair(device.name)} style={{ padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", borderBottom: i < found.length - 1 ? "1px solid var(--hairline-2)" : "none", font: "600 13px var(--sans)" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    <span>{p}</span>
+                    <span>{device.name}</span>
                     <span style={{ font: "700 10px var(--sans)", color: "var(--brand)", textTransform: "uppercase", letterSpacing: ".06em" }}>Pair</span>
                   </div>
                 ))}
@@ -760,6 +993,129 @@ function PrinterTab() {
           </AnimatePresence>
         </div>
       )}
+    </Card>
+  );
+}
+
+/* ═══════════════════════ STAFF LOGIN CODE (inline feature card in profile tab) ═══════════════════════ */
+function StaffLoginCodeInline() {
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+  const [regen, setRegen] = useState(false);
+
+  const { data: settings } = useQuery<{ staff_login_code?: string | null }>({ queryKey: ["admin-settings-code"], queryFn: () => apiFetch("/api/admin/settings"), staleTime: 30_000 });
+  const code = settings?.staff_login_code ?? null;
+
+  const copy = async () => {
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); toast.success("Copied!"); }
+    catch { toast.error("Failed to copy"); }
+  };
+
+  const regenerate = async () => {
+    setRegen(true);
+    try { await apiFetch("/api/admin/settings/login-code", { method: "POST" }); toast.success("New code generated"); queryClient.invalidateQueries({ queryKey: ["admin-settings-code"] }); }
+    catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setRegen(false); }
+  };
+
+  return (
+    <Card style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1.5px solid rgba(34,197,94,.2)" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(34,197,94,.15)", color: "#16a34a", display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ font: "700 13px var(--sans)", color: "#15803d", marginBottom: 2 }}>Staff Login Code</div>
+          <div style={{ font: "500 12px var(--sans)", color: "#166534", marginBottom: 12 }}>Share with staff — they enter this at <code style={{ fontFamily: "var(--mono)", background: "rgba(22,163,74,.12)", padding: "1px 5px", borderRadius: 4, fontSize: 11 }}>/staff-login</code></div>
+          {code ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 28, fontWeight: 800, color: "#15803d", letterSpacing: "0.2em", lineHeight: 1 }}>{code}</div>
+              <button type="button" onClick={copy}
+                style={{ width: 34, height: 34, borderRadius: 9, background: copied ? "rgba(34,197,94,.2)" : "rgba(255,255,255,.8)", border: "1px solid rgba(34,197,94,.3)", display: "grid", placeItems: "center", cursor: "pointer", color: "#16a34a", flexShrink: 0 }}
+                title="Copy code">
+                {copied
+                  ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                }
+              </button>
+            </div>
+          ) : (
+            <div style={{ font: "500 13px var(--sans)", color: "#166534", opacity: .6 }}>No code yet</div>
+          )}
+        </div>
+        <button type="button" onClick={regenerate} disabled={regen}
+          style={{ height: 34, padding: "0 14px", borderRadius: 9, background: "rgba(255,255,255,.8)", border: "1px solid rgba(34,197,94,.3)", display: "flex", alignItems: "center", gap: 6, cursor: regen ? "not-allowed" : "pointer", font: "600 12px var(--sans)", color: "#16a34a", flexShrink: 0, opacity: regen ? .5 : 1 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          {regen ? "…" : code ? "Regenerate" : "Generate"}
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+/* ═══════════════════════ STAFF LOGIN CODE CARD (Plan tab legacy) ═══════════════════════ */
+function StaffLoginCodeCard() {
+  const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
+  const [regen, setRegen] = useState(false);
+
+  const { data: settings } = useQuery<{ staff_login_code?: string | null }>({
+    queryKey: ["admin-settings-code"],
+    queryFn: () => apiFetch("/api/admin/settings"),
+    staleTime: 30_000,
+  });
+  const code = settings?.staff_login_code ?? null;
+
+  const copy = async () => {
+    if (!code) return;
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); toast.success("Copied!"); }
+    catch { toast.error("Failed to copy"); }
+  };
+
+  const regenerate = async () => {
+    setRegen(true);
+    try {
+      await apiFetch("/api/admin/settings/login-code", { method: "POST" });
+      toast.success("New staff login code generated");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings-code"] });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate code");
+    } finally { setRegen(false); }
+  };
+
+  return (
+    <Card>
+      <CardHead title="Staff Login Code" sub="Share this code with staff so they can find your restaurant at /staff-login." />
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: code ? "rgba(30,158,94,.04)" : "var(--bg)", border: `1px solid ${code ? "rgba(30,158,94,.2)" : "var(--hairline)"}`, borderRadius: 12 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(30,158,94,.1)", color: "var(--green)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {code
+            ? <div style={{ fontFamily: "var(--mono)", fontSize: 22, fontWeight: 800, color: "var(--green)", letterSpacing: "0.18em" }}>{code}</div>
+            : <div style={{ font: "500 13px var(--sans)", color: "var(--muted)" }}>No code generated yet</div>
+          }
+          <div style={{ font: "500 11px var(--sans)", color: "var(--muted)", marginTop: 2 }}>6-character code · staff enter this at /staff-login</div>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {code && (
+            <button type="button" onClick={copy}
+              style={{ width: 32, height: 32, borderRadius: 8, background: copied ? "rgba(30,158,94,.1)" : "var(--surface)", border: "1px solid var(--hairline)", display: "grid", placeItems: "center", cursor: "pointer", color: copied ? "var(--green)" : "var(--muted)" }}
+              title="Copy code">
+              {copied
+                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              }
+            </button>
+          )}
+          <button type="button" onClick={regenerate} disabled={regen}
+            style={{ height: 32, padding: "0 12px", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--hairline)", display: "flex", alignItems: "center", gap: 5, cursor: regen ? "not-allowed" : "pointer", font: "600 11px var(--sans)", color: "var(--muted)", opacity: regen ? 0.5 : 1 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            {regen ? "Generating…" : code ? "Regenerate" : "Generate"}
+          </button>
+        </div>
+      </div>
     </Card>
   );
 }
@@ -827,6 +1183,9 @@ function PlanTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: () 
           );
         })}
       </div>
+
+      {/* Staff Login Code card */}
+      <StaffLoginCodeCard />
 
       {/* QR Menu link card */}
       <Card>
@@ -919,27 +1278,31 @@ function SettingsFormInner({ restaurant }: { restaurant: Restaurant }) {
         @keyframes sbShimmer { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
       `}</style>
 
-      {/* ── Tab navigation ── */}
+      {/* ── Tab navigation — pill style ── */}
       <div style={{
-        display: "flex", gap: 0,
-        borderBottom: "1px solid var(--hairline)",
-        marginBottom: 24,
-        overflowX: "auto",
+        display: "inline-flex", gap: 4,
+        background: "rgba(0,0,0,0.05)",
+        borderRadius: 14, padding: 4,
+        marginBottom: 28, overflowX: "auto",
+        maxWidth: "100%",
       }}>
         {TABS.map(tab => {
           const active = activeTab === tab.id;
           return (
             <button key={tab.id} type="button" onClick={() => handleTabChange(tab.id)}
               style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "11px 18px", background: "none", border: "none", cursor: "pointer",
-                font: "600 13px var(--sans)",
-                color: active ? "var(--brand)" : "var(--muted)",
-                borderBottom: active ? "2px solid var(--brand)" : "2px solid transparent",
-                marginBottom: -1, whiteSpace: "nowrap",
-                transition: "color .15s",
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 16px",
+                background: active ? "#fff" : "transparent",
+                border: "none", borderRadius: 10,
+                cursor: "pointer",
+                font: `${active ? "700" : "500"} 13px var(--sans)`,
+                color: active ? "var(--ink)" : "var(--muted)",
+                boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)" : "none",
+                whiteSpace: "nowrap",
+                transition: "all .15s ease",
+                flexShrink: 0,
               }}>
-              <span style={{ fontSize: 13 }}>{tab.ico}</span>
               {tab.label}
             </button>
           );
@@ -954,7 +1317,6 @@ function SettingsFormInner({ restaurant }: { restaurant: Restaurant }) {
           {activeTab === "tax"      && <TaxTab       restaurant={current} onSaved={onSaved} />}
           {activeTab === "staff"    && <StaffTab />}
           {activeTab === "printer"  && <PrinterTab />}
-          {activeTab === "plan"     && <PlanTab      restaurant={current} onSaved={onSaved} />}
         </motion.div>
       </AnimatePresence>
     </>

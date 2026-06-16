@@ -22,6 +22,7 @@ export async function GET(
             table: { select: { table_number: true } },
           },
         },
+        restaurant: { select: { name: true, address: true, gstin: true } },
       },
     });
 

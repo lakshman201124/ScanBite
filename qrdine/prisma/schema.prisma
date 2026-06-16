@@ -21,9 +21,10 @@ model Restaurant {
   onboarded         Boolean           @default(false)
   created_at        DateTime          @default(now()) @db.Timestamptz(6)
   updated_at        DateTime          @updatedAt @db.Timestamptz(6)
-  brand_color       String?           @default("#FF4D3D")
-  cgst_rate         Decimal           @default(2.5) @db.Decimal(4, 2)
-  sgst_rate         Decimal           @default(2.5) @db.Decimal(4, 2)
+  brand_color        String?           @default("#FF4D3D")
+  cgst_rate          Decimal           @default(2.5) @db.Decimal(4, 2)
+  sgst_rate          Decimal           @default(2.5) @db.Decimal(4, 2)
+  staff_login_code   String?           @unique
   audit_logs        AuditLog[]
   bills             Bill[]
   coupons           Coupon[]
@@ -47,10 +48,16 @@ model User {
   pin_hash      String?
   phone         String?    @unique
   role          UserRole   @default(admin)
-  is_active     Boolean    @default(true)
-  created_at    DateTime   @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime   @updatedAt @db.Timestamptz(6)
-  restaurant    Restaurant @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
+  is_active        Boolean    @default(true)
+  setup_code_hash       String?
+  setup_code_expires_at DateTime?  @db.Timestamptz(6)
+  login_attempts   Int        @default(0)
+  locked_until     DateTime?  @db.Timestamptz(6)
+  last_login_at    DateTime?  @db.Timestamptz(6)
+  last_login_ip    String?
+  created_at       DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime   @updatedAt @db.Timestamptz(6)
+  restaurant       Restaurant @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
 
   @@unique([email, restaurant_id])
   @@index([restaurant_id])
@@ -173,7 +180,8 @@ model Order {
   id                  String          @id @default(uuid())
   restaurant_id       String
   table_id            String
-  session_id          String
+  session_id          String?
+  waiter_id           String?
   customer_id         String?
   order_number        String
   status              OrderStatus     @default(pending)
@@ -189,7 +197,7 @@ model Order {
   items               OrderItem[]
   customer            Customer?       @relation(fields: [customer_id], references: [id])
   restaurant          Restaurant      @relation(fields: [restaurant_id], references: [id], onDelete: Cascade)
-  session             CustomerSession @relation(fields: [session_id], references: [id])
+  session             CustomerSession? @relation(fields: [session_id], references: [id])
   table               RestaurantTable @relation(fields: [table_id], references: [id])
 
   @@unique([restaurant_id, order_number])

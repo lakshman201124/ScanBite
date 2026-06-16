@@ -3,8 +3,9 @@ import { jwtVerify } from "jose";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { TablesManager } from "@/components/admin/TablesManager";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const JWT_SECRET = getAuthSecretKey();
 
 async function getWaiterContext() {
   const cookieStore = await cookies();
@@ -21,7 +22,7 @@ async function getWaiterContext() {
 
 export default async function WaiterTablesPage() {
   const ctx = await getWaiterContext();
-  if (!ctx) redirect("/chef-login");
+  if (!ctx) redirect("/staff-login");
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { id: ctx.restaurantId },

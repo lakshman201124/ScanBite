@@ -5,40 +5,17 @@ import { success, error } from "@/lib/api-response";
 import { emitSocketEvent } from "@/lib/socket-emitter";
 import { resolveStaffAuth } from "@/lib/waiter-auth";
 import { v4 as uuidv4 } from "uuid";
+import { generateOrderNumber } from "@/lib/order-number";
 
 const schema = z.object({
-  table_id: z.string().uuid(),
+  table_id: z.string().min(1),
   notes: z.string().max(500).optional(),
   items: z.array(z.object({
-    menu_item_id: z.string().uuid(),
+    menu_item_id: z.string().min(1),
     quantity: z.number().int().min(1).max(99),
     notes: z.string().max(200).optional(),
   })).min(1),
 });
-
-async function getNextOrderNumber(restaurantId: string): Promise<string> {
-  const prefix = "ORD-";
-
-  const last = await prisma.order.findFirst({
-    where: { restaurant_id: restaurantId, order_number: { startsWith: prefix } },
-    orderBy: { order_number: "desc" },
-    select: { order_number: true },
-  });
-
-  let nextNum = 1;
-  if (last) {
-    const parts = last.order_number.split("-");
-    const numPart = parts[1];
-    if (numPart) {
-      const num = parseInt(numPart, 10);
-      if (!isNaN(num)) {
-        nextNum = num + 1;
-      }
-    }
-  }
-
-  return `${prefix}${String(nextNum).padStart(4, "0")}`;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,7 +41,6 @@ export async function POST(req: NextRequest) {
       if (!restaurantExists) {
         return error("Restaurant setup incomplete — please complete onboarding first", 404);
       }
-      // List actual tables to diagnose mismatch
       const actualTables = await prisma.restaurantTable.findMany({
         where: { restaurant_id: restaurantId },
         select: { id: true, table_number: true },
@@ -90,74 +66,130 @@ export async function POST(req: NextRequest) {
 
     const itemMap = new Map(menuItems.map((m) => [m.id, m]));
 
-    // Generate order number
-    const orderNumber = await getNextOrderNumber(restaurantId);
-
-    // Create a real CustomerSession for admin manual orders (required by FK constraint)
-    const adminSession = await prisma.customerSession.create({
-      data: {
-        restaurant_id: restaurantId,
+    // Check for an existing active order on this table before generating a number.
+    // generateOrderNumber uses Redis INCR (atomic) so it cannot run inside a Prisma transaction.
+    const existingOrder = await prisma.order.findFirst({
+      where: {
         table_id,
-        session_token: uuidv4(),
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h for admin orders
-      },
-    });
-
-    // Mark table occupied
-    await prisma.restaurantTable.update({
-      where: { id: table_id },
-      data: { status: "occupied" },
-    });
-
-    // Create order + items atomically
-    const order = await prisma.order.create({
-      data: {
         restaurant_id: restaurantId,
-        table_id,
-        order_number: orderNumber,
-        status: "pending",
-        session_id: adminSession.id,
-        notes: notes ?? null,
+        status: { notIn: ["served", "cancelled"] },
         payment_status: "unpaid",
-        items: {
-          create: items.map((item) => {
-            const menuItem = itemMap.get(item.menu_item_id)!;
-            return {
-              restaurant_id: restaurantId,
-              menu_item_id: item.menu_item_id,
-              item_name: menuItem.name,
-              item_price: menuItem.price,
-              quantity: item.quantity,
-            };
-          }),
-        },
       },
-      include: {
-        items: { select: { item_name: true, item_price: true, quantity: true } },
-        table: { select: { table_number: true } },
-      },
+      select: { id: true, order_number: true, created_at: true },
     });
 
-    // Emit to KDS + orders page
-    await emitSocketEvent({
+    const isNewOrder = !existingOrder;
+    const orderNumber = isNewOrder
+      ? await generateOrderNumber(restaurantId)
+      : existingOrder.order_number;
+
+    const { orderId, orderCreatedAt } = await prisma.$transaction(async (tx) => {
+
+      await tx.restaurantTable.update({
+        where: { id: table_id },
+        data: { status: "occupied" },
+      });
+
+      let orderId: string;
+      let orderCreatedAt: Date;
+
+      if (isNewOrder) {
+        const adminSession = await tx.customerSession.create({
+          data: {
+            restaurant_id: restaurantId,
+            table_id,
+            session_token: uuidv4(),
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          },
+        });
+        const newOrder = await tx.order.create({
+          data: {
+            restaurant_id: restaurantId,
+            table_id,
+            order_number: orderNumber,
+            status: "pending",
+            session_id: adminSession.id,
+            notes: notes ?? null,
+            payment_status: "unpaid",
+          },
+        });
+        orderId = newOrder.id;
+        orderCreatedAt = newOrder.created_at;
+      } else {
+        orderId = existingOrder.id;
+        orderCreatedAt = existingOrder.created_at;
+        if (notes) {
+          await tx.order.update({
+            where: { id: orderId },
+            data: { notes },
+          });
+        }
+      }
+
+      if (isNewOrder) {
+        // New order: batch create all items in one query (no duplicates possible)
+        const orderItemsData = items.map((item) => {
+          const menuItem = itemMap.get(item.menu_item_id)!;
+          return {
+            order_id: orderId,
+            restaurant_id: restaurantId,
+            menu_item_id: item.menu_item_id,
+            item_name: menuItem.name,
+            item_price: menuItem.price,
+            quantity: item.quantity,
+          };
+        });
+        await tx.orderItem.createMany({ data: orderItemsData });
+      } else {
+        // Appending to existing order: must check for duplicates to merge quantities.
+        // N+1 is unavoidable here — we need per-item findFirst to decide update vs create.
+        for (const item of items) {
+          const menuItem = itemMap.get(item.menu_item_id)!;
+          const existing = await tx.orderItem.findFirst({
+            where: { order_id: orderId, menu_item_id: item.menu_item_id },
+            select: { id: true, quantity: true },
+          });
+          if (existing) {
+            await tx.orderItem.update({
+              where: { id: existing.id },
+              data: { quantity: existing.quantity + item.quantity },
+            });
+          } else {
+            await tx.orderItem.create({
+              data: {
+                order_id: orderId,
+                restaurant_id: restaurantId,
+                menu_item_id: item.menu_item_id,
+                item_name: menuItem.name,
+                item_price: menuItem.price,
+                quantity: item.quantity,
+              },
+            });
+          }
+        }
+      }
+
+      return { orderId, orderCreatedAt };
+    });
+
+    emitSocketEvent({
       type: "order:created",
       data: {
-        orderId: order.id,
-        orderNumber: order.order_number,
+        orderId,
+        orderNumber,
         restaurantId,
         tableId: table_id,
         tableName: `Table ${table.table_number}`,
-        items: order.items.map((i) => ({
-          name: i.item_name,
-          quantity: i.quantity,
-          price: Number(i.item_price),
-        })),
-        notes: order.notes,
-        createdAt: order.created_at.toISOString(),
+        items: items.map((item) => {
+          const menuItem = itemMap.get(item.menu_item_id)!;
+          return { name: menuItem.name, quantity: item.quantity, price: Number(menuItem.price) };
+        }),
+        notes: notes ?? null,
+        createdAt: orderCreatedAt.toISOString(),
       },
     });
 
-    return success({ orderId: order.id, orderNumber: order.order_number }, 201);
+    return success({ orderId, orderNumber }, 201);
   } catch (err) {
     console.error("[POST /api/admin/orders/manual]", err);
     return error("Failed to create order", 500);

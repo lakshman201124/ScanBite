@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { success, error } from "@/lib/api-response";
 import { emitSocketEvent } from "@/lib/socket-emitter";
+import { invalidateAdminOrdersCache } from "@/lib/redis";
 
 const schema = z.object({
   orderIds: z.array(z.string().uuid()).min(2, "At least 2 orders required to merge"),
@@ -160,6 +161,8 @@ export async function POST(req: NextRequest) {
         updatedAt: updatedTarget.updated_at.toISOString(),
       },
     });
+
+    await invalidateAdminOrdersCache(restaurantId);
 
     return success({
       mergedIntoOrderId: updatedTarget.id,

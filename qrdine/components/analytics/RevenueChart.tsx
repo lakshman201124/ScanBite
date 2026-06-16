@@ -97,22 +97,32 @@ export function RevenueChart({ data, revenueStats }: ChartProps) {
           )}
 
           {/* Peak tooltip */}
-          {peakPt && peakDay && peakDay.revenue > 0 && (
-            <g>
-              <line x1={peakPt.x} x2={peakPt.x} y1={peakPt.y} y2={H}
-                stroke="#FF5640" strokeOpacity=".25" strokeDasharray="2 3"/>
-              <circle cx={peakPt.x} cy={peakPt.y} r="6" fill="#fff" stroke="#FF5640" strokeWidth="3"/>
-              <g transform={`translate(${Math.min(Math.max(peakPt.x - 46, 0), W - 92)}, ${Math.max(peakPt.y - 44, -8)})`}>
-                <rect x="0" y="0" width="92" height="34" rx="8" fill="#14211A"/>
-                <text x="46" y="14" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="700" fontFamily="var(--sans)">
-                  {peakDay.date}
-                </text>
-                <text x="46" y="27" textAnchor="middle" fill="#FF8A5E" fontSize="11" fontWeight="800" fontFamily="var(--sans)">
-                  ₹{peakDay.revenue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-                </text>
+          {peakPt && peakDay && peakDay.revenue > 0 && (() => {
+            const tx = Math.min(Math.max(peakPt.x - 52, 4), W - 108);
+            const ty = Math.max(peakPt.y - 52, 4);
+            return (
+              <g>
+                <defs>
+                  <filter id="tipShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.08"/>
+                  </filter>
+                </defs>
+                <line x1={peakPt.x} x2={peakPt.x} y1={peakPt.y} y2={H}
+                  stroke="#FF5640" strokeOpacity=".18" strokeDasharray="3 4"/>
+                <circle cx={peakPt.x} cy={peakPt.y} r="5" fill="#fff" stroke="#FF5640" strokeWidth="2.5"/>
+                <g transform={`translate(${tx}, ${ty})`} filter="url(#tipShadow)">
+                  <rect x="0" y="0" width="104" height="38" rx="9"
+                    fill="#fff" stroke="rgba(0,0,0,0.07)" strokeWidth="1"/>
+                  <text x="52" y="14" textAnchor="middle" fill="#888" fontSize="9.5" fontWeight="600" fontFamily="var(--sans)" letterSpacing="0.04em">
+                    {peakDay.date}
+                  </text>
+                  <text x="52" y="29" textAnchor="middle" fill="#FF5640" fontSize="12" fontWeight="800" fontFamily="var(--sans)">
+                    ₹{peakDay.revenue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                  </text>
+                </g>
               </g>
-            </g>
-          )}
+            );
+          })()}
         </svg>
       </div>
 

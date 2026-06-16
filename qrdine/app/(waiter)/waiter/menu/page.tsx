@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const JWT_SECRET = getAuthSecretKey();
 
 async function getStaffContext() {
   const cookieStore = await cookies();
@@ -25,7 +26,7 @@ const FOOD_BADGE: Record<string, { label: string; color: string; dot: string }> 
 
 export default async function StaffMenuPage() {
   const ctx = await getStaffContext();
-  if (!ctx) redirect("/chef-login");
+  if (!ctx) redirect("/staff-login");
 
   const categories = await prisma.menuCategory.findMany({
     where: { restaurant_id: ctx.restaurantId, is_active: true },

@@ -31,10 +31,9 @@ export function Sidebar({ userName = "Admin", userEmail = "" }: {
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   const main = [
-    { id: 'dash',   label: 'Dashboard',  ico: A.dash, href: "/dashboard" },
+    { id: 'dash',   label: 'Dashboard',  ico: A.dash,   href: "/dashboard" },
     { id: 'orders', label: 'Orders',     ico: A.orders, href: "/dashboard/orders" },
-    { id: 'kds',    label: 'Kitchen (KDS)', ico: A.kds, href: "/kds" },
-    { id: 'menu',   label: 'Menu',       ico: A.menu, href: "/dashboard/menu" },
+    { id: 'menu',   label: 'Menu',       ico: A.menu,   href: "/dashboard/menu" },
   ];
   
   const ops = [
@@ -42,7 +41,6 @@ export function Sidebar({ userName = "Admin", userEmail = "" }: {
     { id: 'inventory', label: 'Inventory',   ico: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>, href: "/dashboard/inventory" },
     { id: 'billing',   label: 'Billing',     ico: A.billing, href: "/dashboard/billing" },
     { id: 'analytics', label: 'Analytics',   ico: A.chart,   href: "/dashboard/analytics" },
-    { id: 'staff',     label: 'Staff',       ico: A.users,   href: "/dashboard/settings?tab=staff" },
     { id: 'settings',  label: 'Settings',    ico: A.cog,     href: "/dashboard/settings" },
   ];
 

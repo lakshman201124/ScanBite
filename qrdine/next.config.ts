@@ -16,12 +16,37 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    // Socket server origin is env-driven so changing the host never silently
+    // breaks real-time. Defaults to localhost for local dev.
+    const socketOrigin =
+      process.env.NEXT_PUBLIC_SOCKET_URL?.replace(/^http/, "ws") ??
+      "ws://localhost:3001";
+
     const securityHeaders = [
+      {
+        key: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains; preload",
+      },
       { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-XSS-Protection", value: "1; mode=block" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=()",
+        value: "camera=(), microphone=(), geolocation=(), bluetooth=(self)",
+      },
+      {
+        key: "Content-Security-Policy",
+        value: [
+          "default-src 'self'",
+          // 'unsafe-eval' removed — Next.js does not require it in production.
+          // 'unsafe-inline' kept for now; nonce-based approach is a v2 hardening.
+          "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+          "font-src 'self' https://fonts.gstatic.com",
+          "img-src 'self' data: blob: https://res.cloudinary.com",
+          `connect-src 'self' https://*.upstash.io ${socketOrigin} https://lumberjack.razorpay.com`,
+          "frame-src https://api.razorpay.com",
+        ].join("; "),
       },
     ];
 
@@ -78,7 +103,7 @@ const nextConfig: NextConfig = {
 
       // ─── Auth pages: no-store so credentials never land in cache ──────────
       {
-        source: "/(login|signup|chef-login)",
+        source: "/(login|signup|staff-login)",
         headers: [
           { key: "Cache-Control", value: "no-store, private" },
         ],

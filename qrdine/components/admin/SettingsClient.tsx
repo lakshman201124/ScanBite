@@ -119,17 +119,21 @@ interface RestaurantSettings {
   sgst_rate: number;
   plan: "starter" | "growth" | "pro";
   slug: string;
+  staff_login_code?: string | null;
 }
 
 interface StaffMember {
   id: string;
   name: string;
   email: string;
-  phone: string | null;
   role: "chef" | "waiter";
   is_active: boolean;
   created_at: string;
+  has_pin: boolean;
+  setup_pending: boolean;
 }
+
+type InviteStep = "form" | "done";
 
 /* ═══════════════════════ SCHEMAS ═══════════════════════ */
 const profileSchema = z.object({
@@ -157,9 +161,7 @@ const taxSchema = z.object({
 
 const staffSchema = z.object({
   name: z.string().min(2, "At least 2 characters").max(100),
-  phone: z.string().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number"),
   role: z.enum(["chef", "waiter"]),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -749,12 +751,46 @@ function BillingSection({ settings, onSaved }: { settings: RestaurantSettings; o
 }
 
 /* ═══════════════════════ STAFF SECTION ═══════════════════════ */
+function SetupCodeBox({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{
+        flex: 1, padding: "14px 18px", background: "var(--bg)",
+        border: "1.5px dashed var(--brand)", borderRadius: "var(--r-1)",
+        font: "800 22px var(--mono, monospace)", letterSpacing: ".22em",
+        color: "var(--ink)", textAlign: "center",
+      }}>
+        {code}
+      </div>
+      <button
+        type="button"
+        onClick={() => { void navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+        style={{
+          padding: "12px 16px",
+          background: copied ? "var(--green)" : "var(--surface-2)",
+          color: copied ? "#fff" : "var(--ink)",
+          border: "1px solid var(--hairline)", borderRadius: "var(--r-1)",
+          font: "700 12px var(--sans)", cursor: "pointer", whiteSpace: "nowrap",
+        }}
+      >
+        {copied ? "Copied!" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
 function StaffSection() {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [inviteStep, setInviteStep] = useState<InviteStep>("form");
+  const [inviteName, setInviteName] = useState("");
+  const [setupCode, setSetupCode] = useState("");
+  const [setupCodeFor, setSetupCodeFor] = useState<string | null>(null); // member id for reset-pin code panel
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [resettingPin, setResettingPin] = useState<string | null>(null);
 
   const { data: staff = [], isLoading, error } = useQuery<StaffMember[]>({
     queryKey: ["admin-staff"],
@@ -764,25 +800,51 @@ function StaffSection() {
 
   const { register, handleSubmit, formState: { errors }, reset: resetForm } = useForm<StaffForm>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { name: "", phone: "", role: "chef", email: "" },
+    defaultValues: { name: "", role: "chef" },
   });
+
+  function closeInvite() {
+    setShowAddForm(false);
+    setInviteStep("form");
+    setInviteName("");
+    setSetupCode("");
+    resetForm();
+  }
 
   const handleAdd = async (data: StaffForm) => {
     setSaving(true);
     try {
-      await apiFetch("/api/admin/staff", {
+      const res = await apiFetch<{ id: string; name: string; role: string; setupCode: string }>("/api/admin/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ name: data.name, role: data.role }),
       });
-      toast.success(`${data.name} added as ${data.role}`);
+      setInviteName(res.name);
+      setSetupCode(res.setupCode);
+      setInviteStep("done");
       queryClient.invalidateQueries({ queryKey: ["admin-staff"] });
-      resetForm();
-      setShowAddForm(false);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to add staff");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResetPin = async (member: StaffMember) => {
+    setResettingPin(member.id);
+    try {
+      const res = await apiFetch<{ staffId: string; name: string; setupCode: string }>("/api/admin/staff/reset-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ staffId: member.id }),
+      });
+      setSetupCode(res.setupCode);
+      setSetupCodeFor(member.id);
+      queryClient.invalidateQueries({ queryKey: ["admin-staff"] });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Reset failed");
+    } finally {
+      setResettingPin(null);
     }
   };
 
@@ -846,7 +908,7 @@ function StaffSection() {
           <div>
             <h2 style={{ margin: 0, font: "700 18px var(--sans)", letterSpacing: "-.01em" }}>Staff Management</h2>
             <p style={{ margin: "4px 0 0", font: "500 13px var(--sans)", color: "var(--muted)" }}>
-              Manage chefs and waiters. Staff log in with their phone number.
+              Manage chefs and waiters. Each gets a one-time setup code, then logs in with their own PIN.
             </p>
           </div>
           <button
@@ -868,7 +930,7 @@ function StaffSection() {
           </button>
         </div>
 
-        {/* Add Staff Form */}
+        {/* Invite Flow */}
         <AnimatePresence>
           {showAddForm && (
             <motion.div
@@ -878,56 +940,50 @@ function StaffSection() {
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               style={{ overflow: "hidden" }}
             >
-              <form onSubmit={handleSubmit(handleAdd)}>
-                <div style={{
-                  background: "var(--brand-tint)",
-                  border: "1.5px solid rgba(255,77,61,.15)",
-                  borderRadius: "var(--r-2)",
-                  padding: "20px 22px",
-                }}>
-                  <p style={{ margin: "0 0 16px", font: "700 13px var(--sans)", color: "var(--brand)" }}>New Staff Member</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 140px", gap: 14 }}>
-                    <div>
-                      <Label>Full Name *</Label>
-                      <Input {...register("name")} error={!!errors.name} placeholder="Rajan Kumar" />
-                      <FieldError msg={errors.name?.message} />
+              <div style={{ background: "var(--brand-tint)", border: "1.5px solid rgba(255,77,61,.15)", borderRadius: "var(--r-2)", padding: "20px 22px" }}>
+
+                {inviteStep === "form" && (
+                  <form onSubmit={handleSubmit(handleAdd)}>
+                    <p style={{ margin: "0 0 14px", font: "500 13px var(--sans)", color: "var(--ink-2)" }}>
+                      Add a chef or waiter. You&apos;ll get a one-time setup code to give them — they set their own PIN. You never see it.
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", gap: 14 }}>
+                      <div>
+                        <Label>Full Name *</Label>
+                        <Input {...register("name")} error={!!errors.name} placeholder="Rajan Kumar" />
+                        <FieldError msg={errors.name?.message} />
+                      </div>
+                      <div>
+                        <Label>Role *</Label>
+                        <select {...register("role")} style={{ width: "100%", padding: "10px 14px", background: "var(--bg)", border: "1.5px solid var(--hairline)", borderRadius: "var(--r-1)", font: "500 14px var(--sans)", color: "var(--ink)", outline: "none" }}>
+                          <option value="chef">Chef</option>
+                          <option value="waiter">Waiter</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <Label>Phone Number *</Label>
-                      <Input {...register("phone")} error={!!errors.phone} placeholder="+91 98765 43210" />
-                      <FieldError msg={errors.phone?.message} />
+                    <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+                      <SaveBtn loading={saving} label="Create &amp; get setup code →" />
                     </div>
-                    <div>
-                      <Label>Role *</Label>
-                      <select
-                        {...register("role")}
-                        style={{
-                          width: "100%", padding: "10px 14px",
-                          background: "var(--bg)", border: "1.5px solid var(--hairline)",
-                          borderRadius: "var(--r-1)", font: "500 14px var(--sans)",
-                          color: "var(--ink)", outline: "none",
-                          appearance: "none",
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6A75' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 10px center",
-                          backgroundSize: 16,
-                        }}
-                      >
-                        <option value="chef">Chef</option>
-                        <option value="waiter">Waiter</option>
-                      </select>
-                    </div>
-                    <div style={{ gridColumn: "1 / -1" }}>
-                      <Label>Email (optional)</Label>
-                      <Input {...register("email")} error={!!errors.email} placeholder="staff@restaurant.com" />
-                      <FieldError msg={errors.email?.message} />
+                  </form>
+                )}
+
+                {inviteStep === "done" && (
+                  <div style={{ padding: "4px 0" }}>
+                    <div style={{ font: "800 15px var(--sans)", color: "var(--green)", marginBottom: 2 }}>{inviteName} added</div>
+                    <p style={{ font: "500 13px var(--sans)", color: "var(--muted)", margin: "0 0 14px" }}>
+                      Share this one-time setup code with {inviteName} (in person). It expires in 24 hours. They enter it at <strong>/staff-login → &ldquo;First time? Set up&rdquo;</strong> and choose their own PIN.
+                    </p>
+                    <SetupCodeBox code={setupCode} />
+                    <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
+                      <button type="button" onClick={closeInvite}
+                        style={{ padding: "10px 20px", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "var(--r-1)", font: "700 13px var(--sans)", cursor: "pointer" }}>
+                        Done
+                      </button>
                     </div>
                   </div>
-                  <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-                    <SaveBtn loading={saving} label="Add to team" />
-                  </div>
-                </div>
-              </form>
+                )}
+
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -946,32 +1002,30 @@ function StaffSection() {
           }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>‍</div>
             <p style={{ margin: "0 0 6px", font: "700 15px var(--sans)", color: "var(--ink)" }}>No staff added yet</p>
-            <p style={{ margin: 0, font: "500 13px var(--sans)", color: "var(--muted)" }}>Add chefs and waiters so they can log in with their phone number.</p>
+            <p style={{ margin: 0, font: "500 13px var(--sans)", color: "var(--muted)" }}>Add chefs and waiters — they redeem a setup code and choose their own PIN.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--hairline)", borderRadius: "var(--r-2)", overflow: "hidden" }}>
             {/* Table header */}
             <div style={{
-              display: "grid", gridTemplateColumns: "1fr 160px 120px 80px 100px",
+              display: "grid", gridTemplateColumns: "1fr 120px 130px 110px",
               padding: "10px 16px", background: "var(--bg)",
               borderBottom: "1px solid var(--hairline)",
               font: "700 11px var(--sans)", color: "var(--muted)",
               letterSpacing: ".06em", textTransform: "uppercase",
             }}>
               <span>Staff Member</span>
-              <span>Phone</span>
               <span>Role</span>
               <span>Status</span>
               <span style={{ textAlign: "right" }}>Actions</span>
             </div>
 
             {staff.map((member, i) => (
+              <div key={member.id} style={{ borderBottom: i < staff.length - 1 ? "1px solid var(--hairline-2)" : "none" }}>
               <div
-                key={member.id}
                 style={{
-                  display: "grid", gridTemplateColumns: "1fr 160px 120px 80px 100px",
+                  display: "grid", gridTemplateColumns: "1fr 120px 130px 110px",
                   padding: "14px 16px", alignItems: "center",
-                  borderBottom: i < staff.length - 1 ? "1px solid var(--hairline-2)" : "none",
                   background: member.is_active ? "var(--surface)" : "var(--bg)",
                   transition: "background 0.1s",
                   opacity: editingId === member.id ? 0.5 : 1,
@@ -990,14 +1044,9 @@ function StaffSection() {
                   </div>
                   <div>
                     <div style={{ font: "600 13px var(--sans)", color: member.is_active ? "var(--ink)" : "var(--muted)" }}>{member.name}</div>
-                    <div style={{ font: "500 11px var(--sans)", color: "var(--muted-2)" }}>{member.email}</div>
+                    <div style={{ font: "500 11px var(--sans)", color: "var(--muted-2)" }}>{member.role === "chef" ? "Chef" : "Waiter"}</div>
                   </div>
                 </div>
-
-                {/* Phone */}
-                <span style={{ font: "500 13px var(--sans)", color: "var(--ink-2)", fontFamily: "var(--mono)" }}>
-                  {member.phone ?? "—"}
-                </span>
 
                 {/* Role badge */}
                 <span style={{
@@ -1013,20 +1062,43 @@ function StaffSection() {
                 </span>
 
                 {/* Status */}
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  font: "600 11px var(--sans)",
-                  color: member.is_active ? "var(--green)" : "var(--muted)",
-                }}>
-                  <span style={{
-                    width: 6, height: 6, borderRadius: "50%",
-                    background: member.is_active ? "var(--green)" : "var(--muted-2)",
-                  }} />
-                  {member.is_active ? "Active" : "Off"}
-                </span>
+                {(() => {
+                  const status = member.is_active
+                    ? { label: "Active", color: "var(--green)", dot: "var(--green)" }
+                    : member.setup_pending
+                      ? { label: "Setup pending", color: "var(--brand)", dot: "var(--brand)" }
+                      : member.has_pin
+                        ? { label: "Off", color: "var(--muted)", dot: "var(--muted-2)" }
+                        : { label: "Needs setup", color: "var(--muted)", dot: "var(--muted-2)" };
+                  return (
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      font: "600 11px var(--sans)", color: status.color,
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: status.dot }} />
+                      {status.label}
+                    </span>
+                  );
+                })()}
 
                 {/* Actions */}
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleResetPin(member)}
+                    title="Reset PIN (issues a new one-time setup code)"
+                    disabled={resettingPin === member.id}
+                    style={{
+                      height: 30, padding: "0 8px", borderRadius: 8,
+                      background: "var(--bg)", border: "1px solid var(--hairline)",
+                      display: "flex", alignItems: "center", gap: 4, cursor: "pointer",
+                      font: "600 10px var(--sans)", color: "var(--muted)",
+                      opacity: resettingPin === member.id ? 0.5 : 1,
+                    }}
+                  >
+                    <IcoShield />
+                    {resettingPin === member.id ? "Resetting…" : (member.has_pin ? "Reset PIN" : "New code")}
+                  </button>
                   <button
                     type="button"
                     onClick={() => toggleActive(member)}
@@ -1054,6 +1126,26 @@ function StaffSection() {
                     <IcoTrash />
                   </button>
                 </div>
+              </div>
+
+              {/* Reset-PIN setup code reveal */}
+              {setupCodeFor === member.id && setupCode && (
+                <div style={{ padding: "0 16px 16px" }}>
+                  <div style={{ background: "var(--brand-tint)", border: "1.5px solid rgba(255,77,61,.15)", borderRadius: "var(--r-2)", padding: "14px 16px" }}>
+                    <p style={{ margin: "0 0 10px", font: "500 12px var(--sans)", color: "var(--ink-2)" }}>
+                      New one-time setup code for <strong>{member.name}</strong>. Their old PIN no longer works. Share this in person — it expires in 24h.
+                    </p>
+                    <SetupCodeBox code={setupCode} />
+                    <button
+                      type="button"
+                      onClick={() => { setSetupCodeFor(null); setSetupCode(""); }}
+                      style={{ marginTop: 12, padding: "8px 16px", background: "var(--surface-2)", color: "var(--ink)", border: "1px solid var(--hairline)", borderRadius: "var(--r-1)", font: "700 12px var(--sans)", cursor: "pointer" }}
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
               </div>
             ))}
           </div>
@@ -1114,8 +1206,74 @@ function StaffSection() {
   );
 }
 
+/* ═══════════════════════ STAFF LOGIN CODE CARD ═══════════════════════ */
+function StaffLoginCodeCard({ code, onRefreshed }: { code: string | null; onRefreshed: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [regen, setRegen] = useState(false);
+
+  const copy = async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Copied!");
+    } catch { toast.error("Failed to copy"); }
+  };
+
+  const regenerate = async () => {
+    setRegen(true);
+    try {
+      await apiFetch("/api/admin/settings/login-code", { method: "POST" });
+      toast.success("New staff login code generated");
+      onRefreshed();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate code");
+    } finally {
+      setRegen(false); }
+  };
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 14, padding: "16px 18px",
+      background: code ? "var(--green-soft)" : "var(--bg)",
+      border: `1px solid ${code ? "rgba(30,158,94,.25)" : "var(--hairline)"}`,
+      borderRadius: "var(--r-2)",
+    }}>
+      <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--green-soft)", color: "var(--green)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+        <IcoShield />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ font: "700 12px var(--sans)", color: "var(--ink)", marginBottom: 2 }}>Staff Login Code</div>
+        {code
+          ? <div style={{ font: "800 18px var(--mono)", color: "var(--green)", letterSpacing: "0.12em" }}>{code}</div>
+          : <div style={{ font: "500 12px var(--sans)", color: "var(--muted)" }}>Not generated yet — click Regenerate</div>
+        }
+        <div style={{ font: "500 11px var(--sans)", color: "var(--muted)", marginTop: 2 }}>Share with staff so they can find your restaurant at /staff-login</div>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        {code && (
+          <button type="button" onClick={copy}
+            style={{ width: 32, height: 32, borderRadius: 8, background: copied ? "var(--green-soft)" : "var(--surface)", border: "1px solid var(--hairline)", display: "grid", placeItems: "center", cursor: "pointer", color: copied ? "var(--green)" : "var(--muted)" }}
+            title="Copy code"
+          >
+            {copied ? <IcoCheck /> : <IcoCopy />}
+          </button>
+        )}
+        <button type="button" onClick={regenerate} disabled={regen}
+          style={{ height: 32, padding: "0 10px", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--hairline)", display: "flex", alignItems: "center", gap: 5, cursor: "pointer", font: "600 11px var(--sans)", color: "var(--muted)", opacity: regen ? 0.5 : 1 }}
+          title="Generate new code"
+        >
+          <IcoEdit />
+          {regen ? "Generating…" : code ? "Regenerate" : "Generate"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════ ACCOUNT SECTION ═══════════════════════ */
-function AccountSection({ settings }: { settings: RestaurantSettings }) {
+function AccountSection({ settings, onRefreshed }: { settings: RestaurantSettings; onRefreshed: () => void }) {
   const [copied, setCopied] = useState<"url" | "slug" | null>(null);
   const menuUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${settings.slug}`;
 
@@ -1289,6 +1447,12 @@ function AccountSection({ settings }: { settings: RestaurantSettings }) {
               {copied === "slug" ? <IcoCheck /> : <IcoCopy />}
             </button>
           </div>
+
+          {/* Staff Login Code */}
+          <StaffLoginCodeCard
+            code={settings.staff_login_code ?? null}
+            onRefreshed={onRefreshed}
+          />
         </div>
       </SectionCard>
 
@@ -1436,7 +1600,7 @@ export function SettingsClient() {
                 {activeTab === "branding" && <BrandingSection settings={settings} onSaved={invalidateSettings} />}
                 {activeTab === "billing"  && <BillingSection  settings={settings} onSaved={invalidateSettings} />}
                 {activeTab === "staff"    && <StaffSection />}
-                {activeTab === "account"  && <AccountSection  settings={settings} />}
+                {activeTab === "account"  && <AccountSection  settings={settings} onRefreshed={invalidateSettings} />}
               </motion.div>
             </AnimatePresence>
           ) : null}

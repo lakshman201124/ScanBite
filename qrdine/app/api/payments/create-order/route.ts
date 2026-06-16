@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { validateCustomerSession } from "@/lib/session";
 import { z } from "zod";
 import { success, error } from "@/lib/api-response";
-import { razorpay } from "@/lib/razorpay";
+import { razorpay, isOnlinePaymentsEnabled } from "@/lib/razorpay";
 
 const schema = z.object({
   order_id: z.string().min(1),
@@ -12,6 +12,11 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // v1: online payments are disabled — settle at the counter instead.
+    if (!isOnlinePaymentsEnabled()) {
+      return error("Online payments are not available. Please pay at the counter.", 503);
+    }
+
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("session_token")?.value;
     if (!sessionToken) return error("Session required", 401);

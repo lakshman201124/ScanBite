@@ -221,8 +221,8 @@ export function KDSGrid({ restaurantId, restaurantName, initialOrders }: Props) 
         ) : (
           <div style={{
             display: "grid",
-            gap: 16,
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gap: 14,
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
           }}>
             <AnimatePresence mode="popLayout">
               {filteredOrders.map(order => (

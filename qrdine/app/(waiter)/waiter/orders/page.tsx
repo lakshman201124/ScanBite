@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { OrdersPageClient } from "@/components/orders/OrdersPageClient";
 import type { LiveOrder } from "@/hooks/useOrderUpdates";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const JWT_SECRET = getAuthSecretKey();
 
 async function getWaiterContext() {
   const cookieStore = await cookies();
@@ -47,7 +48,7 @@ async function getActiveOrders(restaurantId: string): Promise<LiveOrder[]> {
 
 export default async function WaiterOrdersPage() {
   const ctx = await getWaiterContext();
-  if (!ctx) redirect("/chef-login");
+  if (!ctx) redirect("/staff-login");
 
   const [initialOrders, tables, menuItems] = await Promise.all([
     getActiveOrders(ctx.restaurantId),

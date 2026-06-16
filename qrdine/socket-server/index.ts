@@ -5,6 +5,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { authenticateSocket } from "./auth";
 import { joinRoomsForSocket } from "./rooms";
 import { registerEventHandlers } from "./events";
+import { startMetricsLogging } from "./metrics";
 import type { ServerToClientEvents, ClientToServerEvents, InterServerEvents, SocketData, OrderCreatedPayload, OrderStatusPayload, BillRequestedPayload, BillGeneratedPayload, PaymentConfirmedPayload } from "./types";
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
@@ -14,7 +15,12 @@ const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
 const httpServer = createServer((req, res) => {
   if (req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "ok", uptime: process.uptime() }));
+    res.end(JSON.stringify({
+      status: "ok",
+      connections: io.engine.clientsCount,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    }));
   } else {
     res.writeHead(404);
     res.end();
@@ -28,8 +34,15 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEve
     credentials: true,
   },
   transports: ["websocket", "polling"],
-  pingTimeout: 60000,
-  pingInterval: 25000,
+  pingTimeout: 30000,       // Reduced from 60000 — detect dead connections faster
+  pingInterval: 15000,      // Reduced from 25000 — more responsive
+  maxHttpBufferSize: 1e6,   // 1MB max message — prevent memory abuse
+  perMessageDeflate: false, // Disable compression — saves CPU, messages are small JSON
+  httpCompression: false,
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true,
+  },
 });
 
 // Redis adapter for horizontal scaling
@@ -116,5 +129,6 @@ io.on("connection", (socket) => {
 setupRedisAdapter().then(() => {
   httpServer.listen(PORT, () => {
     console.log(`[socket-server] listening on port ${PORT}`);
+    startMetricsLogging(io);
   });
 });

@@ -1,7 +1,7 @@
-// ESC/POS command constants for 80mm thermal printers (32 chars per line)
+// ESC/POS command constants for 80mm thermal printers (48 chars per line)
 export const ESC = 0x1b;
 export const GS = 0x1d;
-export const LINE_WIDTH = 32;
+export const LINE_WIDTH = 48;
 
 export const CMD = {
   INIT:       [ESC, 0x40],
@@ -44,7 +44,7 @@ export function line(text: string): number[] {
 }
 
 export function centeredLine(text: string): number[] {
-  return [...CMD.ALIGN_C, ...encodeText(pad(text, LINE_WIDTH, "center")), ...CMD.LF];
+  return [...CMD.ALIGN_C, ...encodeText(text), ...CMD.LF, ...CMD.ALIGN_L];
 }
 
 export function boldLine(text: string): number[] {

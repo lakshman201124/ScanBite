@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { auth } from "@/lib/auth";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const JWT_SECRET = getAuthSecretKey();
 
 export type StaffContext = {
   restaurantId: string;

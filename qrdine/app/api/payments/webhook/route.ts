@@ -1,32 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyWebhookSignature } from "@/lib/razorpay";
+import { verifyWebhookSignature, isOnlinePaymentsEnabled } from "@/lib/razorpay";
 import { emitSocketEvent } from "@/lib/socket-emitter";
 import { calculateBill, generateBillNumber } from "@/lib/billing";
 
 export async function POST(request: NextRequest) {
   try {
+    // v1: online payments are dormant — the webhook is inert until keys exist.
+    if (!isOnlinePaymentsEnabled()) {
+      return NextResponse.json({ success: false, error: "Online payments disabled." }, { status: 503 });
+    }
+
     const signature = request.headers.get("x-razorpay-signature") ?? "";
     const rawBody = await request.text();
 
     if (!verifyWebhookSignature(rawBody, signature)) {
-      console.warn("[webhook] invalid Razorpay signature");
-      // Write audit log for fraud attempt
-      try {
-        await prisma.auditLog.create({
-          data: {
-            restaurant_id: "unknown",
-            action: "webhook_fraud_attempt",
-            entity_type: "payment_webhook",
-            entity_id: "unknown",
-            new_value: { signature: signature.slice(0, 20) + "..." },
-            ip_address: null,
-          },
-        });
-      } catch {
-        // Non-fatal — audit log failure must not block the 400 response
-      }
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      // A bad signature means we cannot trust the payload, so there is no valid
+      // restaurant_id to scope a DB audit row to (the AuditLog FK requires a real
+      // one). Log it for observability instead of writing a fake "unknown" row,
+      // which previously violated the foreign key and threw.
+      console.warn("[webhook] invalid Razorpay signature — possible fraud attempt", {
+        signaturePrefix: signature.slice(0, 12),
+      });
+      return NextResponse.json({ success: false, error: "Invalid signature." }, { status: 400 });
     }
 
     const payload = JSON.parse(rawBody) as {
@@ -101,7 +97,7 @@ export async function POST(request: NextRequest) {
 
       // Create bill if not already present
       if (!existingBill) {
-        const billNumber = await generateBillNumber(order.restaurant_id);
+        const billNumber = await generateBillNumber(order.restaurant_id, tx);
         await tx.bill.create({
           data: {
             order_id: order.id,
@@ -138,10 +134,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ received: true, order_id: order.id });
+    return NextResponse.json({ success: true, received: true, order_id: order.id });
   } catch (err) {
     console.error("[POST /api/payments/webhook]", err);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Webhook processing failed." }, { status: 500 });
   }
 }
 

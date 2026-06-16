@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resolveStaffAuth } from "@/lib/waiter-auth";
 import { z } from "zod";
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
     const paymentStatus = searchParams.get("payment_status");
     const search = searchParams.get("q");
 
-    const where: Record<string, unknown> = { restaurant_id: restaurantId };
+    const where: Prisma.BillWhereInput = { restaurant_id: restaurantId };
     if (dateFrom || dateTo) {
       where.created_at = {
         ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
@@ -121,16 +122,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter by order's payment fields
-    const orderWhere: Record<string, unknown> = {};
-    if (paymentMethod) orderWhere.payment_method = paymentMethod;
-    if (paymentStatus) orderWhere.payment_status = paymentStatus;
+    const orderWhere: Prisma.OrderWhereInput = {};
+    if (paymentMethod) orderWhere.payment_method = paymentMethod as PaymentMethod;
+    if (paymentStatus) orderWhere.payment_status = paymentStatus as PaymentStatus;
     if (Object.keys(orderWhere).length) where.order = orderWhere;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const whereArg = where as any;
     const [bills, total] = await Promise.all([
       prisma.bill.findMany({
-        where: whereArg,
+        where,
         include: {
           order: {
             select: {
@@ -145,7 +144,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.bill.count({ where: whereArg }),
+      prisma.bill.count({ where }),
     ]);
 
     return success({ bills, total, page, pages: Math.ceil(total / limit) });

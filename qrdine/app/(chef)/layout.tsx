@@ -1,10 +1,9 @@
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { redirect } from "next/navigation";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const CHEF_JWT_SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "fallback-secret"
-);
+const CHEF_JWT_SECRET = getAuthSecretKey();
 
 export default async function ChefLayout({
   children,
@@ -14,15 +13,15 @@ export default async function ChefLayout({
   const cookieStore = await cookies();
   const chefToken = cookieStore.get("chef_token")?.value;
 
-  if (!chefToken) redirect("/chef-login");
+  if (!chefToken) redirect("/staff-login");
 
   try {
     const { payload } = await jwtVerify(chefToken, CHEF_JWT_SECRET);
-    // Both roles use the shared staff portal now; only KDS internals still live here
-    if (payload.role !== "chef" && payload.role !== "waiter") redirect("/chef-login");
-    if (payload.role === "waiter") redirect("/waiter/orders");
+    // Strict: only chef (or admin) may access KDS
+    if (payload.role === "waiter") redirect("/waiter");
+    if (payload.role !== "chef" && payload.role !== "admin" && payload.role !== "super_admin") redirect("/staff-login");
   } catch {
-    redirect("/chef-login");
+    redirect("/staff-login");
   }
 
   return <div className="min-h-screen bg-zinc-950">{children}</div>;

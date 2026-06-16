@@ -4,14 +4,14 @@
    ============================================================ */
 :root {
   /* Brand */
-  --brand:        var(--brand);            /* signature coral */
+  --brand:        #FF4D3D;
   --brand-deep:   #E63B2C;
   --brand-soft:   #FFE8E4;
   --brand-tint:   #FFF1EE;
-  --accent:       var(--brand);
+  --accent:       #FF4D3D;
 
   /* Ink */
-  --ink:          var(--ink);
+  --ink:          #14131A;
   --ink-2:        #2A2933;
   --muted:        #6B6A75;
   --muted-2:      #9A99A4;
@@ -19,17 +19,17 @@
   --hairline-2:   rgba(20,19,26,0.04);
 
   /* Surface */
-  --bg:           var(--bg);            /* warm cream */
+  --bg:           #FFF8F3;
   --bg-2:         #FFFCF8;
-  --surface:      var(--surface);
+  --surface:      #FFFFFF;
   --surface-2:    #F6F2EC;
 
   /* Semantic */
-  --green:        var(--green);
+  --green:        #1E9E5E;
   --green-soft:   #E2F5EC;
-  --amber:        var(--amber);
+  --amber:        #FBBF24;
   --amber-soft:   #FFF4DC;
-  --red:          var(--red);
+  --red:          #E23744;
   --blue:         #2E6EF7;
 
   /* Shadow */
@@ -91,7 +91,13 @@ body {
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
   color: var(--ink);
-  background: #EFEAE3;
+  background: var(--bg);
+}
+
+/* KDS critical order pulse ring */
+@keyframes kds-pulse {
+  0%, 100% { box-shadow: var(--sh-2), 0 0 0 3px rgba(224,58,48,0.10); }
+  50%       { box-shadow: var(--sh-2), 0 0 0 6px rgba(224,58,48,0.22); }
 }
 
 /* ============================================================

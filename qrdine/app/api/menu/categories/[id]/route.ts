@@ -56,6 +56,7 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.restaurantId) return unauthorized();
     const restaurantId = session.user.restaurantId;
+    const { id } = await params;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) return error("Category not found", 404);
     const exists = await prisma.menuCategory.findFirst({ where: { id, restaurant_id: restaurantId } });

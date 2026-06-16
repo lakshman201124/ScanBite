@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.restaurantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -13,18 +13,18 @@ export async function POST(req: NextRequest) {
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
   if (!cloudName || !apiKey || !apiSecret) {
-    return NextResponse.json({ error: "Cloudinary not configured" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Upload service not configured." }, { status: 500 });
   }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
+  if (!file) return NextResponse.json({ success: false, error: "No file provided." }, { status: 400 });
 
   if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "Only images allowed" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Only image files are allowed." }, { status: 400 });
   }
   if (file.size > 8 * 1024 * 1024) {
-    return NextResponse.json({ error: "Max 8 MB" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "File exceeds the 8 MB limit." }, { status: 400 });
   }
 
   const timestamp = Math.round(Date.now() / 1000);
@@ -46,8 +46,9 @@ export async function POST(req: NextRequest) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
+    console.error("[upload] Cloudinary error:", err?.error?.message);
     return NextResponse.json(
-      { error: (err?.error?.message) ?? "Upload failed" },
+      { error: "Image upload failed. Please try again." },
       { status: 500 }
     );
   }

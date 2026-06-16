@@ -223,7 +223,7 @@ function BillCard({ bill, onView, onPrint }: { bill: Bill; onView: () => void; o
   );
 }
 
-export function BillsList({ restaurantId }: Props) {
+export function BillsList({ restaurantId: _restaurantId }: Props) {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -253,6 +253,13 @@ export function BillsList({ restaurantId }: Props) {
 
   useEffect(() => { fetchBills(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function handleView(billId: string) {
+    const res = await fetch(`/api/admin/bills/${billId}`);
+    const data = await res.json();
+    if (!data.success) return;
+    setSelectedBill(data.data);
+  }
+
   async function handlePrint(billId: string) {
     const res = await fetch(`/api/admin/bills/${billId}`);
     const data = await res.json();
@@ -260,7 +267,9 @@ export function BillsList({ restaurantId }: Props) {
     const bill = data.data;
     await printBill({
       bill_number: bill.bill_number ?? billId,
-      restaurant_name: "Restaurant",
+      restaurant_name: bill.restaurant?.name || "Restaurant",
+      restaurant_address: bill.restaurant?.address ?? null,
+      gstin: bill.restaurant?.gstin ?? null,
       table_number: bill.order.table?.table_number ?? "?",
       order_number: bill.order.order_number,
       bill: {
@@ -389,7 +398,7 @@ export function BillsList({ restaurantId }: Props) {
               <BillCard
                 key={bill.id}
                 bill={bill}
-                onView={() => setSelectedBill(bill as unknown as Parameters<typeof setSelectedBill>[0])}
+                onView={() => handleView(bill.id)}
                 onPrint={() => handlePrint(bill.id)}
               />
             ))}

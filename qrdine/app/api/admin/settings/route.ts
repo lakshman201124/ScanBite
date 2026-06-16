@@ -25,16 +25,10 @@ export async function GET(_request: NextRequest) {
     const restaurant = await prisma.restaurant.findUnique({
       where: { id: session.user.restaurantId },
       select: {
-        name: true,
-        logo_url: true,
-        brand_color: true,
-        cgst_rate: true,
-        sgst_rate: true,
-        address: true,
-        phone: true,
-        gstin: true,
-        plan: true,
-        slug: true,
+        name: true, logo_url: true, brand_color: true,
+        cgst_rate: true, sgst_rate: true, address: true,
+        phone: true, gstin: true, plan: true, slug: true,
+        staff_login_code: true,
       },
     });
 

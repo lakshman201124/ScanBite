@@ -98,15 +98,16 @@ export function KDSOrderCard({ order, onMarkReady }: Props) {
       style={{
         background: "var(--surface)",
         borderRadius: 14,
-        borderTop: `5px solid ${s.borderColor}`,
-        borderRight: "1px solid var(--hairline)",
-        borderBottom: "1px solid var(--hairline)",
-        borderLeft: "1px solid var(--hairline)",
-        boxShadow: "var(--sh-2)",
+        border: `1.5px solid ${s.borderColor}40`,
+        borderTop: `4px solid ${s.borderColor}`,
+        boxShadow: u === "crit"
+          ? `var(--sh-2), 0 0 0 3px ${s.borderColor}18`
+          : "var(--sh-2)",
         overflow: "hidden",
         fontFamily: "var(--sans)",
         display: "flex",
         flexDirection: "column",
+        animation: u === "crit" ? "kds-pulse 2s ease-in-out infinite" : undefined,
       }}
     >
       {/* Card header */}

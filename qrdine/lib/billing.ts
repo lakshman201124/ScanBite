@@ -72,13 +72,19 @@ export function calculateBill(input: BillInput): BillResult {
   };
 }
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
-export async function generateBillNumber(restaurantId: string): Promise<string> {
+type DbClient = typeof prisma | Prisma.TransactionClient;
+
+export async function generateBillNumber(
+  restaurantId: string,
+  client: DbClient = prisma
+): Promise<string> {
   const prefix = "BILL-";
 
   // Use raw query to avoid TypeScript issues when Prisma client hasn't been regenerated yet
-  const last = await prisma.$queryRaw<Array<{ bill_number: string | null }>>`
+  const last = await client.$queryRaw<Array<{ bill_number: string | null }>>`
     SELECT bill_number FROM bills
     WHERE restaurant_id = ${restaurantId}
       AND bill_number LIKE ${prefix + "%"}

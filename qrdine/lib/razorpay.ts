@@ -1,6 +1,15 @@
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
+/**
+ * v1 ships with counter payment only — the online Razorpay flow is dormant.
+ * Routes use this to stay cleanly inert (503) until live keys are configured,
+ * rather than throwing 500s from a half-initialised client.
+ */
+export function isOnlinePaymentsEnabled(): boolean {
+  return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+}
+
 // Lazy singleton — avoids module-load crash when keys are not yet configured
 let _razorpay: Razorpay | null = null;
 

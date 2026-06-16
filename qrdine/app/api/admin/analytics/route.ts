@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // ── Phase 2: session history (needs current session IDs) ──────────────
-    const currentSessionIds = [...new Set(ordersWithMeta.map(o => o.session_id))];
+    const currentSessionIds = [...new Set(ordersWithMeta.map(o => o.session_id))]
+      .filter((id): id is string => id !== null);
     const sessionHistoryRaw = currentSessionIds.length > 0
       ? await prisma.order.groupBy({
           by: ["session_id"],
@@ -204,7 +205,11 @@ export async function GET(request: NextRequest) {
 
     // ── CRM breakdown ─────────────────────────────────────────────────────
     const sessionOrderCounts: Record<string, number> = {};
-    sessionHistoryRaw.forEach(r => { sessionOrderCounts[r.session_id] = r._count._all; });
+    sessionHistoryRaw.forEach(r => {
+      if (!r.session_id) return;
+      const c = r._count;
+      sessionOrderCounts[r.session_id] = typeof c === "object" && c !== null ? (c._all ?? 0) : 0;
+    });
     let newCount = 0, returningCount = 0, loyalCount = 0;
     currentSessionIds.forEach(sid => {
       const total = sessionOrderCounts[sid] ?? 1;

@@ -33,7 +33,7 @@ export function WaiterSidebar({
 
   const handleLogout = () => {
     document.cookie = "chef_token=; path=/; max-age=0";
-    router.push("/chef-login");
+    router.push("/staff-login");
     router.refresh();
   };
 

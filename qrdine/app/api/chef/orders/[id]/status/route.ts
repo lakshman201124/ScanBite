@@ -5,9 +5,11 @@ import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { success, error } from "@/lib/api-response";
 import { emitSocketEvent } from "@/lib/socket-emitter";
+import { invalidateAdminOrdersCache } from "@/lib/redis";
 import type { OrderStatus } from "@/types";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const CHEF_JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const CHEF_JWT_SECRET = getAuthSecretKey();
 
 async function getChefRestaurantId(): Promise<string | null> {
   const cookieStore = await cookies();
@@ -75,6 +77,8 @@ export async function PATCH(
         updatedAt: updated.updated_at.toISOString(),
       },
     });
+
+    await invalidateAdminOrdersCache(restaurantId);
 
     return success({ orderId, status: newStatus });
   } catch (err) {

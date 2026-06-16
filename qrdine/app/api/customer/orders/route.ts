@@ -6,6 +6,16 @@ import { z } from "zod";
 import { success, error } from "@/lib/api-response";
 import { emitSocketEvent } from "@/lib/socket-emitter";
 import { invalidateMenuCache } from "@/lib/redis";
+import { generateOrderNumber } from "@/lib/order-number";
+
+// Thrown inside the order transaction when an atomic stock decrement fails,
+// so the whole order rolls back and we can return a clean 422.
+class OversellError extends Error {
+  constructor(public itemName: string) {
+    super(`Not enough stock for ${itemName}`);
+    this.name = "OversellError";
+  }
+}
 
 const placeOrderSchema = z.object({
   items: z.array(
@@ -19,29 +29,6 @@ const placeOrderSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-async function getNextOrderNumber(restaurantId: string): Promise<string> {
-  const prefix = "ORD-";
-
-  const last = await prisma.order.findFirst({
-    where: { restaurant_id: restaurantId, order_number: { startsWith: prefix } },
-    orderBy: { order_number: "desc" },
-    select: { order_number: true },
-  });
-
-  let nextNum = 1;
-  if (last) {
-    const parts = last.order_number.split("-");
-    const numPart = parts[1];
-    if (numPart) {
-      const num = parseInt(numPart, 10);
-      if (!isNaN(num)) {
-        nextNum = num + 1;
-      }
-    }
-  }
-
-  return `${prefix}${String(nextNum).padStart(4, "0")}`;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,7 +79,19 @@ export async function POST(request: NextRequest) {
     });
     if (!dbSession) return error("Session not found", 401);
 
-    const orderNumber = await getNextOrderNumber(restaurantId);
+    // Reuse active order on this table if one exists (same table, unpaid, not served/cancelled)
+    const existingOrder = await prisma.order.findFirst({
+      where: {
+        table_id: tableId,
+        restaurant_id: restaurantId,
+        status: { notIn: ["served", "cancelled"] },
+        payment_status: "unpaid",
+      },
+      select: { id: true, order_number: true, created_at: true },
+    });
+
+    const isNewOrder = !existingOrder;
+    const orderNumber = isNewOrder ? await generateOrderNumber(restaurantId) : existingOrder.order_number;
 
     const order = await prisma.$transaction(async (tx) => {
       // Mark table occupied
@@ -101,50 +100,118 @@ export async function POST(request: NextRequest) {
         data: { status: "occupied" },
       });
 
-      const newOrder = await tx.order.create({
-        data: {
-          restaurant_id: restaurantId,
-          table_id: tableId,
-          session_id: dbSession.id,
-          order_number: orderNumber,
-          status: "pending",
-          payment_status: "unpaid",
-          notes: parsed.data.notes || null,
-          ...(customerId ? { customer_id: customerId } : {}),
-        },
-      });
+      let targetOrderId: string;
+      let orderCreatedAt: Date = new Date();
 
-      await tx.orderItem.createMany({
-        data: parsed.data.items.map((cartItem) => {
+      if (isNewOrder) {
+        const newOrder = await tx.order.create({
+          data: {
+            restaurant_id: restaurantId,
+            table_id: tableId,
+            session_id: dbSession.id,
+            order_number: orderNumber,
+            status: "pending",
+            payment_status: "unpaid",
+            notes: parsed.data.notes || null,
+            ...(customerId ? { customer_id: customerId } : {}),
+          },
+        });
+        targetOrderId = newOrder.id;
+        orderCreatedAt = newOrder.created_at;
+      } else {
+        targetOrderId = existingOrder.id;
+        orderCreatedAt = existingOrder.created_at;
+        // Append notes if provided
+        if (parsed.data.notes) {
+          await tx.order.update({
+            where: { id: targetOrderId },
+            data: { notes: parsed.data.notes },
+          });
+        }
+      }
+
+      if (isNewOrder) {
+        // New order: batch create all items in one query (no duplicates possible)
+        const orderItemsData = parsed.data.items.map((cartItem) => {
           const menuItem = itemMap.get(cartItem.menu_item_id)!;
           return {
-            order_id: newOrder.id,
+            order_id: targetOrderId,
             menu_item_id: cartItem.menu_item_id,
             restaurant_id: restaurantId,
             item_name: menuItem.name,
             item_price: menuItem.price,
             quantity: cartItem.quantity,
-            customizations: cartItem.customizations ? (cartItem.customizations as import("@prisma/client").Prisma.InputJsonValue) : undefined,
+            customizations: cartItem.customizations
+              ? (cartItem.customizations as import("@prisma/client").Prisma.InputJsonValue)
+              : undefined,
           };
-        }),
-      });
-
-      // Deduct stock for each item
-      for (const cartItem of parsed.data.items) {
-        const dbItem = itemMap.get(cartItem.menu_item_id)!;
-        if (dbItem.stock_quantity !== null) {
-          const newStock = dbItem.stock_quantity - cartItem.quantity;
-          await tx.menuItem.update({
-            where: { id: cartItem.menu_item_id },
-            data: {
-              stock_quantity: newStock,
-              is_available: newStock > 0
-            }
+        });
+        await tx.orderItem.createMany({ data: orderItemsData });
+      } else {
+        // Appending to existing order: must check for duplicates to merge quantities.
+        // N+1 is unavoidable here — we need per-item findFirst to decide update vs create.
+        for (const cartItem of parsed.data.items) {
+          const menuItem = itemMap.get(cartItem.menu_item_id)!;
+          const existing = await tx.orderItem.findFirst({
+            where: { order_id: targetOrderId, menu_item_id: cartItem.menu_item_id },
+            select: { id: true, quantity: true },
           });
+          if (existing) {
+            await tx.orderItem.update({
+              where: { id: existing.id },
+              data: { quantity: existing.quantity + cartItem.quantity },
+            });
+          } else {
+            await tx.orderItem.create({
+              data: {
+                order_id: targetOrderId,
+                menu_item_id: cartItem.menu_item_id,
+                restaurant_id: restaurantId,
+                item_name: menuItem.name,
+                item_price: menuItem.price,
+                quantity: cartItem.quantity,
+                customizations: cartItem.customizations
+                  ? (cartItem.customizations as import("@prisma/client").Prisma.InputJsonValue)
+                  : undefined,
+              },
+            });
+          }
         }
       }
 
-      return newOrder;
+      // Atomic conditional stock decrement — the only correct guard against
+      // oversell under concurrency. updateMany with a `gte` guard decrements only
+      // if enough stock is still present at WRITE time; count===0 means another
+      // concurrent order took it first, so we abort and roll the whole order back.
+      const stockItems = parsed.data.items.filter(
+        (cartItem) => itemMap.get(cartItem.menu_item_id)!.stock_quantity !== null
+      );
+      for (const cartItem of stockItems) {
+        const dbItem = itemMap.get(cartItem.menu_item_id)!;
+        const res = await tx.menuItem.updateMany({
+          where: {
+            id: cartItem.menu_item_id,
+            restaurant_id: restaurantId,
+            stock_quantity: { gte: cartItem.quantity },
+          },
+          data: { stock_quantity: { decrement: cartItem.quantity } },
+        });
+        if (res.count === 0) {
+          throw new OversellError(dbItem.name);
+        }
+      }
+      // Flip availability off for anything that just hit zero.
+      if (stockItems.length > 0) {
+        await tx.menuItem.updateMany({
+          where: {
+            id: { in: stockItems.map((ci) => ci.menu_item_id) },
+            stock_quantity: { lte: 0 },
+          },
+          data: { is_available: false },
+        });
+      }
+
+      return { id: targetOrderId, order_number: orderNumber, created_at: orderCreatedAt };
     });
 
     // Invalidate menu cache — stock levels changed, is_available may have toggled
@@ -192,6 +259,9 @@ export async function POST(request: NextRequest) {
       201
     );
   } catch (err) {
+    if (err instanceof OversellError) {
+      return error(`Sorry — "${err.itemName}" just ran out or doesn't have enough left. Please adjust your order.`, 422);
+    }
     console.error("[POST /api/customer/orders]", err);
     return error("Failed to place order", 500);
   }

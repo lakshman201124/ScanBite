@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getAuthSecretKey } from "@/lib/secret";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.AUTH_SECRET ?? "fallback-secret");
+const JWT_SECRET = getAuthSecretKey();
 
 async function getStaffContext() {
   const cookieStore = await cookies();
@@ -18,7 +19,7 @@ async function getStaffContext() {
 
 export default async function StaffQRPage() {
   const ctx = await getStaffContext();
-  if (!ctx) redirect("/chef-login");
+  if (!ctx) redirect("/staff-login");
 
   const [tables, restaurant] = await Promise.all([
     prisma.restaurantTable.findMany({

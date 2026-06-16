@@ -106,7 +106,7 @@ export default function LoginPage() {
             <Link href="/signup" style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}>Create account</Link>
           </p>
           <div style={{ marginTop: 12, textAlign: "center" }}>
-            <Link href="/chef-login" style={{ fontSize: 12, color: "var(--muted-2)", textDecoration: "none" }}>Chef / Kitchen login →</Link>
+            <Link href="/staff-login" style={{ fontSize: 12, color: "var(--muted-2)", textDecoration: "none" }}>Staff login (Chef / Waiter) →</Link>
           </div>
 
           {/* Dev hint */}

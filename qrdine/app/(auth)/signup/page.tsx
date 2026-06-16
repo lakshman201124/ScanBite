@@ -108,12 +108,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
 
-  // OTP verification state
-  const [otpStep, setOtpStep] = useState<"idle" | "sent" | "verified">("idle");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpError, setOtpError] = useState("");
-
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -153,38 +147,8 @@ export default function SignupPage() {
     return () => clearInterval(interval);
   }, [showLoader, router, loaderSteps.length]);
 
-  async function handleSendOtp() {
-    if (!phone.match(/^\+?[0-9]{10,15}$/)) {
-      setOtpError("Enter a valid phone number first.");
-      return;
-    }
-    setOtpSending(true);
-    setOtpError("");
-    try {
-      const res = await fetch("/api/auth/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, type: "admin_signup" }),
-      });
-      const data: { success: boolean; error?: string } = await res.json();
-      if (!res.ok || !data.success) {
-        setOtpError(data.error ?? "Failed to send OTP");
-      } else {
-        setOtpStep("sent");
-      }
-    } catch {
-      setOtpError("Failed to send OTP. Try again.");
-    } finally {
-      setOtpSending(false);
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (otpStep !== "verified") {
-      setError("Please verify your phone number first.");
-      return;
-    }
     setError("");
     setLoading(true);
 
@@ -192,7 +156,7 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurantName, email, password, phone, otpCode }),
+        body: JSON.stringify({ restaurantName, email, password, phone }),
       });
 
       const data: { success: boolean; error?: string } = await res.json();
@@ -574,65 +538,15 @@ export default function SignupPage() {
               }
             />
 
-            {/* Phone + OTP verification */}
-            <div className="mb-2">
-              <FloatingInput
-                label="Phone number"
-                type="tel"
-                value={phone}
-                onChange={(val) => { setPhone(val); setOtpStep("idle"); setOtpCode(""); setOtpError(""); }}
-                placeholder="e.g. +91 98765 43210"
-                required
-                icon={<Phone className="w-4 h-4" />}
-                rightElement={
-                  otpStep === "verified" ? (
-                    <span className="text-emerald-500 text-xs font-black pr-1">Verified</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={otpSending || !phone}
-                      className="text-[var(--brand)] text-xs font-black pr-1 disabled:opacity-40 hover:underline"
-                    >
-                      {otpSending ? "Sending…" : otpStep === "sent" ? "Resend" : "Send OTP"}
-                    </button>
-                  )
-                }
-              />
-
-              {otpError && (
-                <p className="text-red-500 text-xs font-semibold mt-1 ml-7">{otpError}</p>
-              )}
-
-              {otpStep === "sent" && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-3"
-                >
-                  <FloatingInput
-                    label="6-digit OTP"
-                    type="text"
-                    value={otpCode}
-                    onChange={(val) => {
-                      const digits = val.replace(/\D/g, "").slice(0, 6);
-                      setOtpCode(digits);
-                      setOtpError("");
-                      // Mark verified locally when 6 digits entered;
-                      // actual OTP check happens server-side on form submit
-                      if (digits.length === 6) setOtpStep("verified");
-                      else setOtpStep("sent");
-                    }}
-                    placeholder="Enter the code sent to your phone"
-                    required
-                    icon={<Lock className="w-4 h-4" />}
-                  />
-                  <p className="text-zinc-400 text-[11px] ml-7 -mt-4">
-                    Code sent to {phone}. Valid for 5 minutes.
-                  </p>
-                </motion.div>
-              )}
-            </div>
+            {/* Phone (optional) */}
+            <FloatingInput
+              label="Phone number (optional)"
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              placeholder="e.g. +91 98765 43210"
+              icon={<Phone className="w-4 h-4" />}
+            />
 
             {/* Terms text */}
             <p className="text-[11px] leading-relaxed text-zinc-400 pb-3">

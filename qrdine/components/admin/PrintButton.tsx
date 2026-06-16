@@ -34,7 +34,7 @@ export function PrintButton({ orderId, orderNumber, type, label }: PrintButtonPr
         if (!orderData.success) throw new Error("Order not found");
         const order = orderData.data;
         const ok = await printKOT({
-          restaurant_name: "Restaurant",
+          restaurant_name: order.restaurantName || "Restaurant",
           table_number: order.tableName?.replace("Table ", "") ?? "?",
           order_number: orderNumber,
           created_at: order.createdAt,
@@ -53,7 +53,9 @@ export function PrintButton({ orderId, orderNumber, type, label }: PrintButtonPr
         if (!billData.success) throw new Error("Bill not found");
         const b = billData.data;
         const ok = await printBill({
-          restaurant_name: "Restaurant",
+          restaurant_name: b.restaurant?.name || "Restaurant",
+          restaurant_address: b.restaurant?.address ?? null,
+          gstin: b.restaurant?.gstin ?? null,
           table_number: b.order.table?.table_number ?? "?",
           order_number: b.order.order_number,
           bill_number: b.bill_number ?? b.id,

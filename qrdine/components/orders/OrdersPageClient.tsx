@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Search, Plus, Download, CalendarDays, List, LayoutGrid,
-  Phone, Mail, FileText, Printer, ChevronRight, ChevronLeft, ChevronDown,
+  FileText, Printer, ChevronRight, ChevronLeft, ChevronDown,
   Check, X, Clock, UtensilsCrossed,
 } from "lucide-react";
 import { useOrderUpdates } from "@/hooks/useOrderUpdates";
@@ -315,18 +315,48 @@ function NewOrderPanel({
 
 /* ════════════════════════ OrderDetail ════════════════════════ */
 
-function printBill(order: LiveOrder) {
-  const subtotal = order.items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const gst      = Math.round(subtotal * 0.05);
-  const service  = Math.round(subtotal * 0.08);
-  const total    = subtotal + gst + service;
+type BillBreakdown = {
+  subtotal: number;
+  cgst_rate: number;
+  sgst_rate: number;
+  cgst: number;
+  sgst: number;
+  discount: number;
+  tip: number;
+  total: number;
+};
 
+type StoredBill = BillBreakdown & { id: string; bill_number: string | null };
+
+interface BillState {
+  payment_status: "unpaid" | "paid" | "refunded";
+  payment_method: string | null;
+  table_number: string | null;
+  bill: StoredBill | null;
+  preview: BillBreakdown;
+}
+
+function checkoutBtnStyle(loading: boolean): React.CSSProperties {
+  return {
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+    width: "100%", padding: "12px 0", borderRadius: 12,
+    background: loading ? "var(--surface-2)" : "var(--brand)",
+    color: loading ? "var(--muted)" : "#fff",
+    border: "none", font: "800 13px var(--sans)", cursor: loading ? "wait" : "pointer",
+    boxShadow: loading ? "none" : "var(--sh-coral)",
+  };
+}
+
+// Print a thermal-style bill from SERVER-computed numbers (never client math).
+function printBill(order: LiveOrder, b: BillBreakdown, billNumber: string | null) {
   const rows = order.items.map(i =>
-    `<tr><td>${i.name}</td><td style="text-align:center">×${i.quantity}</td><td style="text-align:right">₹${(i.price * i.quantity).toFixed(0)}</td></tr>`
+    `<tr><td>${i.name}</td><td style="text-align:center">×${i.quantity}</td><td style="text-align:right">₹${(i.price * i.quantity).toFixed(2)}</td></tr>`
   ).join("");
+  const line = (label: string, val: number) =>
+    `<tr><td>${label}</td><td style="text-align:right">₹${val.toFixed(2)}</td></tr>`;
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Bill – ${order.orderNumber}</title>
+<title>Bill – ${billNumber ?? order.orderNumber}</title>
 <style>
   body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:12px}
   h2{text-align:center;font-size:14px;margin:0 0 4px}
@@ -334,12 +364,12 @@ function printBill(order: LiveOrder) {
   hr{border:none;border-top:1px dashed #999;margin:8px 0}
   table{width:100%;border-collapse:collapse}
   td{padding:2px 0}
-  .tot{font-weight:bold}
+  .tot{font-weight:bold;font-size:13px}
   .center{text-align:center;margin-top:10px;font-size:11px;color:#555}
 </style>
 </head><body>
 <h2>BILL</h2>
-<div class="sub">Table ${order.tableName || "—"} &nbsp;·&nbsp; ${order.orderNumber}</div>
+<div class="sub">${billNumber ? billNumber + " · " : ""}Table ${order.tableName || "—"} · ${order.orderNumber}</div>
 <div class="sub">${new Date(order.createdAt).toLocaleString("en-IN")}</div>
 <hr/>
 <table>
@@ -348,10 +378,12 @@ function printBill(order: LiveOrder) {
 </table>
 <hr/>
 <table>
-  <tr><td>Subtotal</td><td style="text-align:right">₹${subtotal.toFixed(0)}</td></tr>
-  <tr><td>GST 5%</td><td style="text-align:right">₹${gst}</td></tr>
-  <tr><td>Service 8%</td><td style="text-align:right">₹${service}</td></tr>
-  <tr class="tot"><td><b>Total</b></td><td style="text-align:right"><b>₹${total.toFixed(0)}</b></td></tr>
+  ${line("Subtotal", b.subtotal)}
+  ${b.discount > 0 ? line("Discount", -b.discount) : ""}
+  ${line(`CGST ${b.cgst_rate}%`, b.cgst)}
+  ${line(`SGST ${b.sgst_rate}%`, b.sgst)}
+  ${b.tip > 0 ? line("Tip", b.tip) : ""}
+  <tr class="tot"><td>Total</td><td style="text-align:right">₹${b.total.toFixed(2)}</td></tr>
 </table>
 <hr/>
 <div class="center">Thank you for dining with us!</div>
@@ -363,17 +395,62 @@ function printBill(order: LiveOrder) {
 }
 
 function OrderDetail({ order, onClose: _onClose }: { order: LiveOrder; onClose: () => void }) {
-  const subtotal = order.items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const gst      = Math.round(subtotal * 0.05);
-  const service  = Math.round(subtotal * 0.08);
-  const total    = subtotal + gst + service;
+  const [state, setState] = useState<BillState | null>(null);
+  const [busy, setBusy] = useState<null | "generate" | "pay" | "serve">(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [method, setMethod] = useState<"cash" | "card" | "upi">("cash");
 
-  const timelineSteps = [
-    { label: "Order placed",   detail: `Table ${order.tableName || "Takeaway"}`, done: true,                                                          current: false },
-    { label: "Preparing",      detail: "Kitchen",                                done: ["preparing","ready","served"].includes(order.status),          current: order.status === "preparing" },
-    { label: "Ready to serve", detail: "—",                                      done: ["ready","served"].includes(order.status),                      current: order.status === "ready" },
-    { label: "Served",         detail: "—",                                      done: order.status === "served",                                      current: false },
-  ];
+  const loadBill = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/orders/${order.orderId}/bill`);
+      const json = (await res.json()) as { success: boolean; data?: BillState };
+      if (res.ok && json.success && json.data) setState(json.data);
+    } catch { /* leave null; actions stay disabled until state loads */ }
+  }, [order.orderId]);
+
+  useEffect(() => { setState(null); setErr(null); void loadBill(); }, [loadBill]);
+
+  const isPaid = state?.payment_status === "paid";
+  const breakdown: BillBreakdown | null = state ? (state.bill ?? state.preview) : null;
+
+  async function handleGenerate() {
+    setBusy("generate"); setErr(null);
+    try {
+      const res = await fetch("/api/admin/bills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: order.orderId }),
+      });
+      const json = (await res.json()) as { success: boolean; error?: string };
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to generate bill");
+      await loadBill();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(null); }
+  }
+
+  async function handlePay() {
+    setBusy("pay"); setErr(null);
+    try {
+      const res = await fetch(`/api/admin/orders/${order.orderId}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_method: method }),
+      });
+      const json = (await res.json()) as { success: boolean; error?: string };
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to settle");
+      await loadBill();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(null); }
+  }
+
+  const isServed = order.status === "served";
+  const handleMarkServed = async () => {
+    if (isServed || busy) return;
+    setBusy("serve"); setErr(null);
+    try { await updateStatus(order.orderId, "served"); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(null); }
+  };
 
   return (
     <aside className="ord-detail">
@@ -387,17 +464,6 @@ function OrderDetail({ order, onClose: _onClose }: { order: LiveOrder; onClose: 
         <span className={`status-pill ${statusPillClass(order.status)}`}>
           <span className="dot" />{statusLabel(order.status)}
         </span>
-      </div>
-
-      {/* Customer card */}
-      <div className="ord-cust-card">
-        <div className="ord-cust-card__av" />
-        <div>
-          <div>Guest · {order.tableName || "Takeaway"}</div>
-          <div><span>Table {order.tableName || "—"}</span></div>
-        </div>
-        <button className="ord-iconbtn" title="Email"><Mail size={12} /></button>
-        <button className="ord-iconbtn" title="Call"><Phone size={12} /></button>
       </div>
 
       {/* Items */}
@@ -430,51 +496,108 @@ function OrderDetail({ order, onClose: _onClose }: { order: LiveOrder; onClose: 
         </div>
       )}
 
-      {/* Totals */}
+      {/* Totals — server-computed (subtotal / CGST / SGST / total) */}
       <div className="ord-totals">
-        <div className="ord-totals__row"><span>Subtotal</span><span>₹{subtotal.toFixed(0)}</span></div>
-        <div className="ord-totals__row"><span>GST · 5%</span><span>₹{gst}</span></div>
-        <div className="ord-totals__row"><span>Service · 8%</span><span>₹{service}</span></div>
-        <div className="ord-totals__row ord-totals__row--big"><span>Total</span><span>₹{total.toFixed(0)}</span></div>
+        {breakdown ? (
+          <>
+            <div className="ord-totals__row"><span>Subtotal</span><span>₹{breakdown.subtotal.toFixed(2)}</span></div>
+            {breakdown.discount > 0 && <div className="ord-totals__row"><span>Discount</span><span>−₹{breakdown.discount.toFixed(2)}</span></div>}
+            <div className="ord-totals__row"><span>CGST · {breakdown.cgst_rate}%</span><span>₹{breakdown.cgst.toFixed(2)}</span></div>
+            <div className="ord-totals__row"><span>SGST · {breakdown.sgst_rate}%</span><span>₹{breakdown.sgst.toFixed(2)}</span></div>
+            {breakdown.tip > 0 && <div className="ord-totals__row"><span>Tip</span><span>₹{breakdown.tip.toFixed(2)}</span></div>}
+            <div className="ord-totals__row ord-totals__row--big"><span>Total</span><span>₹{breakdown.total.toFixed(2)}</span></div>
+          </>
+        ) : (
+          <div className="ord-totals__row"><span style={{ color: "var(--muted)" }}>Loading bill…</span><span /></div>
+        )}
         <div className="ord-pay">
-          <div className="ord-pay__chip">
-            <span className="ord-pay__sw" />
-            {order.status === "served" ? "Paid" : "Pending payment"}
+          <div className="ord-pay__chip" style={{ color: isPaid ? "var(--green)" : "var(--muted)" }}>
+            <span className="ord-pay__sw" style={{ background: isPaid ? "var(--green)" : "var(--muted-2)" }} />
+            {isPaid
+              ? `Paid${state?.payment_method ? " · " + state.payment_method : ""}`
+              : state?.bill ? "Bill generated · unpaid" : "Unpaid"}
           </div>
         </div>
       </div>
 
+      {err && <div style={{ font: "600 12px var(--sans)", color: "var(--red)", padding: "0 2px 10px" }}>{err}</div>}
+
+      {/* Counter checkout */}
+      {!isPaid && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+          {!state?.bill ? (
+            <button onClick={handleGenerate} disabled={busy !== null || !breakdown} style={checkoutBtnStyle(busy === "generate")}>
+              <FileText size={14} /> {busy === "generate" ? "Generating…" : "Generate bill"}
+            </button>
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 6 }}>
+                {(["cash", "card", "upi"] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setMethod(m)}
+                    style={{
+                      flex: 1, padding: "8px 0", borderRadius: 10,
+                      border: `1.5px solid ${method === m ? "var(--brand)" : "var(--hairline)"}`,
+                      background: method === m ? "var(--brand-soft)" : "var(--bg)",
+                      color: method === m ? "var(--brand)" : "var(--ink-2)",
+                      font: "700 12px var(--sans)", cursor: "pointer", textTransform: "capitalize",
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <button onClick={handlePay} disabled={busy !== null} style={checkoutBtnStyle(busy === "pay")}>
+                <Check size={14} /> {busy === "pay" ? "Settling…" : `Mark paid · ₹${breakdown?.total.toFixed(2) ?? ""}`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Timeline */}
       <div className="ord-section-h">Timeline</div>
       <div className="ord-timeline">
-        {timelineSteps.map((step, idx) => (
-          <div key={idx} className={`ord-step${step.done ? " is-done" : step.current ? " is-current" : ""}`}>
-            <div className="ord-step__bullet">
-              {step.done ? <Check size={12} /> : step.current ? <span className="ord-step__pulse" /> : null}
-            </div>
-            <div className="ord-step__body">
-              <div className="ord-step__label">{step.label}</div>
-              <div className="ord-step__detail">{step.detail}</div>
-            </div>
-            <div className="ord-step__t">
-              {step.done || step.current ? fmtTime(order.updatedAt) : "—"}
-            </div>
+        <div className="ord-step is-done">
+          <div className="ord-step__bullet"><Check size={12} /></div>
+          <div className="ord-step__body">
+            <div className="ord-step__label">Order placed</div>
+            <div className="ord-step__detail">Table {order.tableName || "Takeaway"}</div>
           </div>
-        ))}
+          <div className="ord-step__t">{fmtTime(order.createdAt)}</div>
+        </div>
+
+        <div
+          className={`ord-step${isServed ? " is-done" : ""}`}
+          onClick={handleMarkServed}
+          style={{
+            cursor: isServed ? "default" : busy === "serve" ? "wait" : "pointer",
+            userSelect: "none",
+            opacity: isServed ? 1 : 0.45,
+            transition: "opacity .2s",
+          }}
+        >
+          <div className="ord-step__bullet">
+            {isServed ? <Check size={12} /> : busy === "serve" ? <span className="ord-step__pulse" /> : null}
+          </div>
+          <div className="ord-step__body">
+            <div className="ord-step__label">{isServed ? "Served" : "Mark Served"}</div>
+            <div className="ord-step__detail">{isServed ? fmtTime(order.updatedAt) : "Tap to mark as served"}</div>
+          </div>
+          <div className="ord-step__t">{isServed ? fmtTime(order.updatedAt) : "—"}</div>
+        </div>
       </div>
 
-      {/* Actions */}
+      {/* Print */}
       <div className="ord-actions">
-        <button className="ord-btn-ghost" onClick={() => printBill(order)}>
+        <button
+          className="ord-btn-ghost"
+          onClick={() => breakdown && printBill(order, breakdown, state?.bill?.bill_number ?? null)}
+          disabled={!breakdown}
+        >
           <Printer size={13} /> Print Bill
         </button>
-        <OrderStatusActions
-          orderId={order.orderId}
-          currentStatus={order.status as OrderStatus}
-          onStatusChange={async (id, status, reason) => {
-            await updateStatus(id, status, reason);
-          }}
-        />
       </div>
     </aside>
   );

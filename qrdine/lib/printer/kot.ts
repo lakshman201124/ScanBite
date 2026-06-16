@@ -21,8 +21,8 @@ export function buildKOTBuffer(input: KOTInput): Uint8Array {
 
   const segments: number[][] = [
     CMD.INIT,
-    ...centeredLine(input.restaurant_name).map(n => [n]),
-    ...boldLine("KITCHEN ORDER TICKET").map(n => [n]),
+    centeredLine(input.restaurant_name),
+    boldLine("KITCHEN ORDER TICKET"),
     dashes(),
     twoColLine("Table:", `T${input.table_number}`),
     twoColLine("KOT # :", input.order_number),

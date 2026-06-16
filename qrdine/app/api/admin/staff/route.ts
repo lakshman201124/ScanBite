@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { success, error, unauthorized } from "@/lib/api-response";
 import { z } from "zod";
 import { UserRole } from "@prisma/client";
-
-const phoneSchema = z.string().regex(/^\+?[0-9]{10,15}$/, "Invalid phone number");
+import { issueSetupCode } from "@/lib/setup-code";
 
 export async function GET(_request: NextRequest) {
   try {
@@ -14,21 +14,30 @@ export async function GET(_request: NextRequest) {
     const restaurantId = session.user.restaurantId;
     const staff = await prisma.user.findMany({
       where: { restaurant_id: restaurantId, role: { in: [UserRole.chef, UserRole.waiter] } },
-      select: { id: true, name: true, email: true, phone: true, role: true, is_active: true, created_at: true },
+      select: {
+        id: true, name: true, email: true, role: true, is_active: true, created_at: true,
+        pin_hash: true, setup_code_expires_at: true,
+      },
       orderBy: { created_at: "desc" },
     });
-    return success(staff);
+    // Never leak the hash — expose only whether a PIN is set / setup is pending.
+    const shaped = staff.map(({ pin_hash, setup_code_expires_at, ...s }) => ({
+      ...s,
+      has_pin: pin_hash !== null,
+      setup_pending: setup_code_expires_at !== null && setup_code_expires_at > new Date(),
+    }));
+    return success(shaped);
   } catch (err) {
     console.error("[GET /api/admin/staff]", err);
     return error("Failed to fetch staff", 500);
   }
 }
 
+// Onboard staff with name + role only. The admin never sets the PIN — instead we
+// issue a one-time setup code the staff member redeems to set their own PIN.
 const createStaffSchema = z.object({
   name: z.string().min(2).max(100),
-  phone: phoneSchema,
   role: z.enum(["chef", "waiter"]).default("chef"),
-  email: z.string().email().optional().or(z.literal("")),
 });
 
 export async function POST(request: NextRequest) {
@@ -39,23 +48,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = createStaffSchema.safeParse(body);
     if (!parsed.success) return error(parsed.error.issues[0]?.message || "Invalid data", 400);
-    const { name, phone, role, email } = parsed.data;
+    const { name, role } = parsed.data;
 
-    const existingPhone = await prisma.user.findFirst({ where: { phone } });
-    if (existingPhone) return error("A staff member with this phone number already exists", 400);
-
-    const newStaff = await prisma.user.create({
+    const staff = await prisma.user.create({
       data: {
         restaurant_id: restaurantId,
         name,
-        phone,
-        email: email || `${phone.replace(/\D/g, "")}@staff.scanbite.app`,
+        // Synthetic, collision-free email — staff identity is name + restaurant, not email.
+        email: `staff_${randomUUID()}@scanbite.local`,
         role: role as UserRole,
-        is_active: true,
+        is_active: false,
       },
-      select: { id: true, name: true, phone: true, role: true, is_active: true },
+      select: { id: true, name: true, role: true },
     });
-    return success(newStaff, 201);
+
+    const setupCode = await issueSetupCode(staff.id);
+    return success({ id: staff.id, name: staff.name, role: staff.role, setupCode }, 201);
   } catch (err) {
     console.error("[POST /api/admin/staff]", err);
     return error("Failed to create staff member", 500);
@@ -63,11 +71,10 @@ export async function POST(request: NextRequest) {
 }
 
 const updateStaffSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(2).max(100).optional(),
-  phone: phoneSchema.optional(),
+  id:        z.string().min(1),
+  name:      z.string().min(2).max(100).optional(),
   is_active: z.boolean().optional(),
-  role: z.enum(["chef", "waiter"]).optional(),
+  role:      z.enum(["chef", "waiter"]).optional(),
 });
 
 export async function PATCH(request: NextRequest) {
@@ -78,21 +85,16 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const parsed = updateStaffSchema.safeParse(body);
     if (!parsed.success) return error(parsed.error.issues[0]?.message || "Invalid data", 400);
-    const { id, name, phone, is_active, role } = parsed.data;
+    const { id, name, is_active, role } = parsed.data;
     const staffMember = await prisma.user.findFirst({ where: { id, restaurant_id: restaurantId } });
     if (!staffMember) return error("Staff member not found", 404);
-    if (phone && phone !== staffMember.phone) {
-      const existingPhone = await prisma.user.findFirst({ where: { phone } });
-      if (existingPhone) return error("Phone number already in use", 400);
-    }
     const data: Record<string, unknown> = {};
     if (name !== undefined) data.name = name;
-    if (phone !== undefined) data.phone = phone;
     if (is_active !== undefined) data.is_active = is_active;
     if (role !== undefined) data.role = role as UserRole;
     const updated = await prisma.user.update({
       where: { id }, data,
-      select: { id: true, name: true, phone: true, role: true, is_active: true },
+      select: { id: true, name: true, role: true, is_active: true },
     });
     return success(updated);
   } catch (err) {
@@ -111,8 +113,8 @@ export async function DELETE(request: NextRequest) {
     if (!id) return error("Missing ID", 400);
     const staffMember = await prisma.user.findFirst({ where: { id, restaurant_id: restaurantId } });
     if (!staffMember) return error("Staff member not found", 404);
-    await prisma.user.update({ where: { id }, data: { is_active: false } });
-    return success({ message: "Staff member deactivated successfully" });
+    await prisma.user.delete({ where: { id } });
+    return success({ message: "Staff member deleted successfully" });
   } catch (err) {
     console.error("[DELETE /api/admin/staff]", err);
     return error("Failed to delete staff member", 500);

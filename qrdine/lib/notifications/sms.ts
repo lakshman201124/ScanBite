@@ -39,6 +39,15 @@ export async function sendOtpSms(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[otp:whatsapp] send failed:", message);
+    // Dev fallback — requires explicit OTP_DEV_FALLBACK=true opt-in so this never
+    // silently swallows failures in production even if NODE_ENV is misconfigured.
+    if (process.env.OTP_DEV_FALLBACK === "true" && process.env.NODE_ENV !== "production") {
+      console.log(`\n[OTP DEV FALLBACK] Twilio delivery failed — use this code:`);
+      console.log(`  Phone : ${phone}`);
+      console.log(`  Code  : ${code}`);
+      console.log(`  Error : ${message}\n`);
+      return { success: true };
+    }
     return { success: false, error: message };
   }
 }
