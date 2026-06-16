@@ -14,7 +14,12 @@ export const CACHE_TTL = {
 } as const;
 
 export async function cacheGet<T>(key: string): Promise<T | null> {
-  return redis.get<T>(key);
+  try {
+    return await redis.get<T>(key);
+  } catch {
+    console.warn(`[redis] cacheGet miss (Redis down) key=${key}`);
+    return null;
+  }
 }
 
 export async function cacheSet<T>(
@@ -22,24 +27,37 @@ export async function cacheSet<T>(
   value: T,
   ttlSeconds: number
 ): Promise<void> {
-  await redis.setex(key, ttlSeconds, JSON.stringify(value));
+  try {
+    await redis.setex(key, ttlSeconds, JSON.stringify(value));
+  } catch {
+    console.warn(`[redis] cacheSet skipped (Redis down) key=${key}`);
+  }
 }
 
 export async function cacheDel(key: string): Promise<void> {
-  await redis.del(key);
+  try {
+    await redis.del(key);
+  } catch {
+    console.warn(`[redis] cacheDel skipped (Redis down) key=${key}`);
+  }
 }
 
-// Invalidates both restaurantId-keyed and slug-keyed menu caches atomically
 export async function invalidateMenuCache(restaurantId: string, slug: string): Promise<void> {
-  await Promise.all([
-    redis.del(`menu:${restaurantId}`),
-    redis.del(`menu:${slug}`),
-  ]);
+  try {
+    await Promise.all([
+      redis.del(`menu:${restaurantId}`),
+      redis.del(`menu:${slug}`),
+    ]);
+  } catch {
+    console.warn(`[redis] invalidateMenuCache skipped (Redis down) restaurantId=${restaurantId}`);
+  }
 }
 
-// Invalidate admin orders cache
 export async function invalidateAdminOrdersCache(restaurantId: string): Promise<void> {
-  // With 5s TTL, aggressive invalidation isn't critical, but we clean the most common key
-  await redis.del(`admin_orders:${restaurantId}:all:active:1:50`);
+  try {
+    await redis.del(`admin_orders:${restaurantId}:all:active:1:50`);
+  } catch {
+    console.warn(`[redis] invalidateAdminOrdersCache skipped (Redis down) restaurantId=${restaurantId}`);
+  }
 }
 

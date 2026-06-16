@@ -4,11 +4,10 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Building2, 
-  Paintbrush, 
-  Receipt, 
-  CreditCard, 
-  Coffee, 
+  Building2,
+  Paintbrush,
+  Receipt,
+  Coffee,
   Grid2X2, 
   Users2, 
   Sparkles, 
@@ -41,8 +40,6 @@ export default function OnboardingWizard() {
   const [cgstRate, setCgstRate] = useState(2.5);
   const [sgstRate, setSgstRate] = useState(2.5);
   
-  const [plan, setPlan] = useState<"starter" | "growth" | "pro">("starter");
-  
   const [categoryName, setCategoryName] = useState("Best Sellers");
   const [menuItems, setMenuItems] = useState([
     { name: "Paneer Tikka Masala", price: 280, description: "Charcoal grilled cottage cheese in rich gravy", food_type: "veg" as const },
@@ -65,7 +62,6 @@ export default function OnboardingWizard() {
     { title: "Profile", icon: Building2 },
     { title: "Branding", icon: Paintbrush },
     { title: "Taxes & Receipt", icon: Receipt },
-    { title: "SaaS Plan", icon: CreditCard },
     { title: "Menu Setup", icon: Coffee },
     { title: "Tables Setup", icon: Grid2X2 },
     { title: "Chef Account", icon: Users2 },
@@ -73,7 +69,7 @@ export default function OnboardingWizard() {
   ];
 
   const handleNext = () => {
-    if (step < 8) setStep(step + 1);
+    if (step < 7) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -110,9 +106,9 @@ export default function OnboardingWizard() {
 
   const validateStep = () => {
     if (step === 1) return name.trim() !== "" && phone.trim() !== "";
-    if (step === 5) return categoryName.trim() !== "" && menuItems.every(i => i.name.trim() !== "" && i.price >= 0);
-    if (step === 6) return tables.length > 0 && tables.every(t => t.table_number.trim() !== "");
-    if (step === 7) return chefName.trim() !== "" && chefEmail.trim() !== "" && /^\d{4,6}$/.test(chefPin);
+    if (step === 4) return categoryName.trim() !== "" && menuItems.every(i => i.name.trim() !== "" && i.price >= 0);
+    if (step === 5) return tables.length > 0 && tables.every(t => t.table_number.trim() !== "");
+    if (step === 6) return chefName.trim() !== "" && chefEmail.trim() !== "" && /^\d{4,6}$/.test(chefPin);
     return true;
   };
 
@@ -128,7 +124,6 @@ export default function OnboardingWizard() {
         gstin: gstin || null,
         cgst_rate: Number(cgstRate),
         sgst_rate: Number(sgstRate),
-        plan,
         categoryName,
         menuItems: menuItems.map(item => ({
           name: item.name,
@@ -377,71 +372,8 @@ export default function OnboardingWizard() {
               )}
 
               {/* Step 4: Plan */}
+              {/* Step 4: Menu Setup */}
               {step === 4 && (
-                <div className="space-y-5">
-                  <div>
-                    <h3 className="text-xl font-bold text-zinc-950 font-[var(--sans)]">Subscription Level</h3>
-                    <p className="text-xs text-zinc-400 mt-1">Select a structured service tier mapping your dine-in operational scale.</p>
-                  </div>
-                  <hr className="border-zinc-150" />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Starter */}
-                    <div 
-                      onClick={() => setPlan("starter")}
-                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-[transform,opacity] ${
-                        plan === "starter" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 [box-shadow:var(--sh-1)]" : "border-zinc-200 hover:border-zinc-300"
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-zinc-400">Starter</span>
-                        <h4 className="text-xl font-extrabold text-zinc-950">₹0</h4>
-                        <ul className="text-[10px] text-zinc-500 space-y-1">
-                          <li>• Max 5 Tables</li>
-                          <li>• Max 30 Items</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Growth */}
-                    <div 
-                      onClick={() => setPlan("growth")}
-                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-[transform,opacity] ${
-                        plan === "growth" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 [box-shadow:var(--sh-1)]" : "border-zinc-200 hover:border-zinc-300"
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--brand)]">Growth</span>
-                        <h4 className="text-xl font-extrabold text-zinc-950">₹999<span className="text-[9px] font-medium text-zinc-500">/mo</span></h4>
-                        <ul className="text-[10px] text-zinc-500 space-y-1">
-                          <li>• Max 20 Tables</li>
-                          <li>• Max 200 Items</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Pro */}
-                    <div 
-                      onClick={() => setPlan("pro")}
-                      className={`border rounded-3xl p-4 cursor-pointer flex flex-col justify-between transition-[transform,opacity] ${
-                        plan === "pro" ? "border-zinc-950 bg-zinc-50/50 ring-1 ring-zinc-950 [box-shadow:var(--sh-1)]" : "border-zinc-200 hover:border-zinc-300"
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-[var(--brand)]">Enterprise Pro</span>
-                        <h4 className="text-xl font-extrabold text-zinc-950">₹2,499<span className="text-[9px] font-medium text-zinc-500">/mo</span></h4>
-                        <ul className="text-[10px] text-zinc-500 space-y-1">
-                          <li>• Unlimited Seating</li>
-                          <li>• 365 Days Retention</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 5: Menu Setup */}
-              {step === 5 && (
                 <div className="space-y-5">
                   <div className="flex justify-between items-center gap-4">
                     <div>
@@ -516,8 +448,8 @@ export default function OnboardingWizard() {
                 </div>
               )}
 
-              {/* Step 6: Tables Setup */}
-              {step === 6 && (
+              {/* Step 5: Tables Setup */}
+              {step === 5 && (
                 <div className="space-y-5">
                   <div className="flex justify-between items-center gap-4">
                     <div>
@@ -571,8 +503,8 @@ export default function OnboardingWizard() {
                 </div>
               )}
 
-              {/* Step 7: Chef Account */}
-              {step === 7 && (
+              {/* Step 6: Chef Account */}
+              {step === 6 && (
                 <div className="space-y-5">
                   <div>
                     <h3 className="text-xl font-bold text-zinc-950 font-[var(--sans)]">Kitchen Security</h3>
@@ -624,8 +556,8 @@ export default function OnboardingWizard() {
                 </div>
               )}
 
-              {/* Step 8: Go Live */}
-              {step === 8 && (
+              {/* Step 7: Go Live */}
+              {step === 7 && (
                 <div className="text-center py-4 space-y-4 max-w-md mx-auto flex flex-col items-center">
                   <div className="w-14 h-14 bg-gradient-to-tr from-[var(--brand)] to-[#FF7A4D] text-white rounded-3xl flex items-center justify-center [box-shadow:var(--sh-3)] shadow-orange-500/25">
                     <CheckCircle2 className="w-7 h-7" />
@@ -639,10 +571,6 @@ export default function OnboardingWizard() {
                     <div className="flex justify-between pb-2">
                       <span className="text-zinc-400">Establishment</span>
                       <span className="text-zinc-950 font-bold">{name}</span>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-zinc-400">SaaS Tier</span>
-                      <span className="text-zinc-950 font-bold capitalize">{plan}</span>
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="text-zinc-400">Dishes Generated</span>
@@ -667,7 +595,7 @@ export default function OnboardingWizard() {
             >
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
-            {step < 8 ? (
+            {step < 7 ? (
               <button 
                 onClick={handleNext} 
                 disabled={!validateStep()}

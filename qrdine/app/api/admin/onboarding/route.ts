@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { success, error, unauthorized } from "@/lib/api-response";
-import { PlanType, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -20,9 +20,6 @@ const onboardingSchema = z.object({
   gstin: z.string().optional().nullable(),
   cgst_rate: z.number().default(2.5),
   sgst_rate: z.number().default(2.5),
-  
-  // Plan Selection
-  plan: z.enum(["starter", "growth", "pro"]).default("starter"),
   
   // First Category
   categoryName: z.string().min(2),
@@ -81,7 +78,6 @@ export async function POST(request: NextRequest) {
           gstin: data.gstin,
           cgst_rate: data.cgst_rate,
           sgst_rate: data.sgst_rate,
-          plan: data.plan as PlanType,
           onboarded: true
         }
       });

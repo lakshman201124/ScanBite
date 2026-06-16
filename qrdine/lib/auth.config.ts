@@ -1,5 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
-import type { UserRole, PlanType } from "@/types";
+import type { UserRole } from "@/types";
 
 declare module "next-auth" {
   interface Session {
@@ -7,7 +7,6 @@ declare module "next-auth" {
       id: string;
       restaurantId: string;
       role: UserRole;
-      plan: PlanType;
       name: string;
       email: string;
     };
@@ -16,7 +15,6 @@ declare module "next-auth" {
   interface User {
     restaurantId: string;
     role: UserRole;
-    plan: PlanType;
   }
 }
 
@@ -31,7 +29,6 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.restaurantId = user.restaurantId;
         token.role = user.role;
-        token.plan = user.plan;
       }
       return token;
     },
@@ -43,7 +40,6 @@ export const authConfig: NextAuthConfig = {
           id: token.sub ?? "",
           restaurantId: token.restaurantId as string,
           role: token.role as UserRole,
-          plan: token.plan as PlanType,
           name: token.name ?? "",
           email: token.email ?? "",
         },

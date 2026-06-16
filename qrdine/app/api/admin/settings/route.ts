@@ -14,7 +14,6 @@ const settingsSchema = z.object({
   brand_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
   cgst_rate: z.number().min(0).max(50).optional(),
   sgst_rate: z.number().min(0).max(50).optional(),
-  plan: z.enum(["starter", "growth", "pro"]).optional(),
 });
 
 export async function GET(_request: NextRequest) {
@@ -27,7 +26,7 @@ export async function GET(_request: NextRequest) {
       select: {
         name: true, logo_url: true, brand_color: true,
         cgst_rate: true, sgst_rate: true, address: true,
-        phone: true, gstin: true, plan: true, slug: true,
+        phone: true, gstin: true, slug: true,
         staff_login_code: true,
       },
     });
@@ -60,7 +59,6 @@ export async function PATCH(request: NextRequest) {
         ...(parsed.data.brand_color !== undefined && { brand_color: parsed.data.brand_color }),
         ...(parsed.data.cgst_rate !== undefined && { cgst_rate: parsed.data.cgst_rate }),
         ...(parsed.data.sgst_rate !== undefined && { sgst_rate: parsed.data.sgst_rate }),
-        ...(parsed.data.plan !== undefined && { plan: parsed.data.plan }),
       },
       select: { slug: true },
     });

@@ -22,7 +22,6 @@ interface Restaurant {
   gstin: string | null;
   cgst_rate: number | string | null;
   sgst_rate: number | string | null;
-  plan: string;
   staff_login_code?: string | null;
 }
 
@@ -1122,68 +1121,9 @@ function StaffLoginCodeCard() {
 
 /* ═══════════════════════ TAB: PLAN ═══════════════════════ */
 function PlanTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: () => void }) {
-  const [saving, setSaving] = useState(false);
-  const [pending, setPending] = useState<string | null>(null);
-
-  const upgradePlan = async (plan: string) => {
-    if (restaurant.plan === plan) return;
-    setSaving(true);
-    try {
-      await apiFetch("/api/admin/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan }) });
-      toast.success(`Upgraded to ${plan}`);
-      onSaved(); setPending(null);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-    finally { setSaving(false); }
-  };
-
-  const plans = [
-    { id: "starter", label: "Starter",  price: "Free",      sub: "Forever",         color: "var(--muted)",  features: ["5 Tables", "30 Menu Items", "Basic Analytics"], missing: ["Staff Accounts", "WhatsApp Bills", "Priority Support"] },
-    { id: "growth",  label: "Growth",   price: "₹999",      sub: "/month",          color: "var(--blue)",   features: ["20 Tables", "200 Menu Items", "Staff Accounts", "WhatsApp Bills"], missing: ["Unlimited Tables", "Dynamic Modules"] },
-    { id: "pro",     label: "Pro",      price: "₹2,499",    sub: "/month",          color: "var(--brand)",  features: ["Unlimited Tables", "Unlimited Items", "All Features", "Priority Support", "365-day Analytics"], missing: [] },
-  ];
-
+  void onSaved;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-        {plans.map(p => {
-          const isCurrent = restaurant.plan === p.id;
-          return (
-            <div key={p.id} style={{ background: "var(--surface)", border: `1.5px solid ${isCurrent ? p.color : "var(--hairline)"}`, borderRadius: 18, padding: "20px 20px 20px", position: "relative", transition: "box-shadow .15s", boxShadow: isCurrent ? `0 8px 28px -10px ${p.color}60` : "none" }}>
-              {isCurrent && <span style={{ position: "absolute", top: -1, right: 14, padding: "2px 9px", background: p.color, color: "#fff", font: "700 9px var(--sans)", letterSpacing: ".06em", borderRadius: "0 0 7px 7px" }}>CURRENT</span>}
-              <div style={{ font: "800 13px var(--sans)", color: p.color, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>{p.label}</div>
-              <div style={{ marginBottom: 14 }}>
-                <span style={{ fontFamily: "var(--display)", fontSize: 28, fontWeight: 400, color: "var(--ink)" }}>{p.price}</span>
-                <span style={{ font: "500 12px var(--sans)", color: "var(--muted)", marginLeft: 4 }}>{p.sub}</span>
-              </div>
-              <ul style={{ listStyle: "none", margin: "0 0 16px", padding: 0, display: "flex", flexDirection: "column", gap: 7 }}>
-                {p.features.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "center", gap: 7, font: "500 12px var(--sans)", color: "var(--ink-2)" }}>
-                    <span style={{ width: 16, height: 16, borderRadius: 5, background: "var(--green-soft)", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l1.5 1.5L6.5 2" stroke="var(--green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </span>
-                    {f}
-                  </li>
-                ))}
-                {p.missing.map(f => (
-                  <li key={f} style={{ display: "flex", alignItems: "center", gap: 7, font: "500 12px var(--sans)", color: "var(--muted-2)" }}>
-                    <span style={{ width: 16, height: 16, borderRadius: 5, background: "var(--surface-2)", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M2 2l4 4M6 2L2 6" stroke="var(--muted-2)" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                    </span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              {!isCurrent && (
-                <button type="button" onClick={() => setPending(p.id)}
-                  style={{ width: "100%", padding: "10px 0", borderRadius: 999, background: p.id === "pro" ? "var(--brand)" : "var(--ink)", color: "#fff", border: "none", font: "700 12px var(--sans)", cursor: "pointer", boxShadow: p.id === "pro" ? "var(--sh-coral)" : "none" }}>
-                  Choose {p.label}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
       {/* Staff Login Code card */}
       <StaffLoginCodeCard />
 
@@ -1223,28 +1163,6 @@ function PlanTab({ restaurant, onSaved }: { restaurant: Restaurant; onSaved: () 
         </button>
       </div>
 
-      {/* Confirm upgrade modal */}
-      <AnimatePresence>
-        {pending && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: "fixed", inset: 0, background: "rgba(20,19,26,.45)", backdropFilter: "blur(4px)", zIndex: 100, display: "grid", placeItems: "center" }}
-            onClick={() => setPending(null)}>
-            <motion.div initial={{ scale: .92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: .92, y: 12 }} transition={{ type: "spring", stiffness: 380, damping: 24 }}
-              onClick={e => e.stopPropagation()}
-              style={{ background: "var(--surface)", borderRadius: 20, padding: "28px 32px", maxWidth: 360, width: "90%", boxShadow: "var(--sh-3)" }}>
-              <div style={{ font: "700 16px var(--sans)", marginBottom: 8 }}>Upgrade to {pending?.toUpperCase()}?</div>
-              <p style={{ font: "500 13px var(--sans)", color: "var(--muted)", margin: "0 0 22px", lineHeight: 1.6 }}>This will change your active plan. Billing updates take effect immediately.</p>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button type="button" onClick={() => setPending(null)} style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: "var(--surface-2)", border: "1px solid var(--hairline)", font: "600 12px var(--sans)", cursor: "pointer" }}>Cancel</button>
-                <button type="button" onClick={() => upgradePlan(pending!)} disabled={saving}
-                  style={{ flex: 1, padding: "10px 0", borderRadius: 999, background: "var(--brand)", color: "#fff", border: "none", font: "700 12px var(--sans)", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? .6 : 1 }}>
-                  {saving ? "…" : "Confirm"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

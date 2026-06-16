@@ -20,7 +20,6 @@ export type OrderStatus =
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
 export type PaymentMethod = "cash" | "upi" | "card" | "wallet";
 export type FoodType = "veg" | "non_veg" | "egg" | "vegan";
-export type PlanType = "starter" | "growth" | "pro";
 export type TableStatus = "available" | "occupied" | "reserved";
 
 export interface Restaurant {
@@ -34,7 +33,6 @@ export interface Restaurant {
   brand_color: string | null;
   cgst_rate: number;
   sgst_rate: number;
-  plan: PlanType;
   is_active: boolean;
   created_at: string;
 }
@@ -174,7 +172,6 @@ export interface AdminJWTPayload {
   userId: string;
   restaurantId: string;
   role: UserRole;
-  plan: PlanType;
   name: string;
   email: string;
 }
