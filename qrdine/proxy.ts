@@ -3,12 +3,11 @@ import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import type { NextAuthRequest } from "next-auth";
-import { Redis } from "@upstash/redis";
-import { Ratelimit } from "@upstash/ratelimit";
 import { getAuthSecretKey } from "@/lib/secret";
+import { rateLimiters, checkRateLimit } from "@/lib/rate-limit";
+import { Ratelimit } from "@upstash/ratelimit";
 
 const { auth } = NextAuth(authConfig);
-
 const CHEF_SECRET = getAuthSecretKey();
 
 async function verifyChefJWT(token: string) {
@@ -20,114 +19,67 @@ async function verifyChefJWT(token: string) {
   }
 }
 
-// Initialize Upstash Redis client
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-});
+function clientIp(req: NextAuthRequest): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
 
-// Ratelimiter for OTP Send: 5 requests per 10 minutes
-const otpRatelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, "10 m"),
-  analytics: true,
-  prefix: "ratelimit:otp",
-});
-
-// Ratelimiter for Customer Orders: 5 requests per 10 seconds
-const orderRatelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(5, "10 s"),
-  analytics: true,
-  prefix: "ratelimit:orders",
-});
+function pickLimiter(pathname: string, method: string): { limiter: Ratelimit; klass: string } | null {
+  if (pathname === "/api/payments/webhook") {
+    return { limiter: rateLimiters.webhook, klass: "webhook" };
+  }
+  if (method === "POST") {
+    if (
+      pathname === "/api/customer/orders" ||
+      pathname === "/api/admin/orders/manual" ||
+      pathname === "/api/waiter/orders"
+    ) {
+      return { limiter: rateLimiters.orderCreate, klass: "orderCreate" };
+    }
+  }
+  if (
+    pathname === "/api/auth/signup" ||
+    pathname === "/api/auth/otp/send" ||
+    pathname === "/api/auth/staff/login" ||
+    pathname === "/api/auth/staff/setup"
+  ) {
+    return { limiter: rateLimiters.auth, klass: "auth" };
+  }
+  if (pathname.startsWith("/api/public/") || pathname === "/api/session/create") {
+    return { limiter: rateLimiters.menuApi, klass: "menuApi" };
+  }
+  if (
+    pathname.startsWith("/api/admin/") ||
+    pathname.startsWith("/api/menu/") ||
+    pathname.startsWith("/api/tables") ||
+    pathname.startsWith("/api/waiter/")
+  ) {
+    return { limiter: rateLimiters.adminApi, klass: "adminApi" };
+  }
+  return null;
+}
 
 export const proxy = auth(async function proxy(req: NextAuthRequest) {
   const { pathname } = req.nextUrl;
   const session = req.auth;
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "127.0.0.1";
 
-  // 1. Rate limiting for OTP send API (Must run before general auth bypass)
-  if (pathname === "/api/auth/otp/send") {
-    // Check if test bypass is active and we want to skip rate limits for testing
-    if (
-      process.env.TEST_OTP_BYPASS === "true" &&
-      process.env.NODE_ENV !== "production"
-    ) {
-      return NextResponse.next();
-    }
-
-    try {
-      const { success, limit, reset, remaining } = await otpRatelimit.limit(ip);
+  // ── Rate limiting ────────────────────────────────────────────────────────
+  if (pathname.startsWith("/api/") && pathname !== "/api/health") {
+    const picked = pickLimiter(pathname, req.method);
+    if (picked) {
+      const ip = clientIp(req);
+      const { success, remaining, reset } = await checkRateLimit(picked.limiter, ip);
+      if (remaining === -1) {
+        console.warn(`[proxy] rate-limit fail-open klass=${picked.klass} path=${pathname}`);
+      }
       if (!success) {
-        return new NextResponse(
-          JSON.stringify({
-            success: false,
-            error: "Too many OTP requests. Please try again later.",
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              "X-RateLimit-Limit": limit.toString(),
-              "X-RateLimit-Remaining": remaining.toString(),
-              "X-RateLimit-Reset": reset.toString(),
-            },
-          }
+        const retryAfter = reset ? Math.max(1, Math.ceil((reset - Date.now()) / 1000)) : 60;
+        return NextResponse.json(
+          { success: false, error: "Too many requests. Please slow down and try again.", code: "RATE_LIMITED" },
+          { status: 429, headers: { "Retry-After": String(retryAfter) } }
         );
       }
-
-      const response = NextResponse.next();
-      response.headers.set("X-RateLimit-Limit", limit.toString());
-      response.headers.set("X-RateLimit-Remaining", remaining.toString());
-      response.headers.set("X-RateLimit-Reset", reset.toString());
-      return response;
-    } catch (error) {
-      console.error("[Proxy] OTP rate limiting error:", error);
-      // Fail open: let requests pass if Redis/RateLimiter is down
-      return NextResponse.next();
-    }
-  }
-
-  // 2. Rate limiting for Customer Orders API
-  if (pathname === "/api/customer/orders") {
-    // Check if test bypass is active to avoid rate-limiting E2E tests
-    if (
-      process.env.TEST_OTP_BYPASS === "true" &&
-      process.env.NODE_ENV !== "production"
-    ) {
-      return NextResponse.next();
-    }
-
-    try {
-      const { success, limit, reset, remaining } = await orderRatelimit.limit(ip);
-      if (!success) {
-        return new NextResponse(
-          JSON.stringify({
-            success: false,
-            error: "Too many requests. Please slow down.",
-          }),
-          {
-            status: 429,
-            headers: {
-              "Content-Type": "application/json",
-              "X-RateLimit-Limit": limit.toString(),
-              "X-RateLimit-Remaining": remaining.toString(),
-              "X-RateLimit-Reset": reset.toString(),
-            },
-          }
-        );
-      }
-
-      const response = NextResponse.next();
-      response.headers.set("X-RateLimit-Limit", limit.toString());
-      response.headers.set("X-RateLimit-Remaining", remaining.toString());
-      response.headers.set("X-RateLimit-Reset", reset.toString());
-      return response;
-    } catch (error) {
-      console.error("[Proxy] Order rate limiting error:", error);
-      // Fail open to avoid blocking legitimate orders
-      return NextResponse.next();
     }
   }
 
@@ -136,14 +88,13 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
     return NextResponse.next();
   }
 
-  // Admin dashboard + /api/admin
+  // ── Admin dashboard + /api/admin ─────────────────────────────────────────
   if (
     pathname.startsWith("/dashboard") ||
     pathname === "/onboarding" ||
     pathname.startsWith("/api/admin")
   ) {
     if (!session?.user?.restaurantId) {
-      // API routes → 401 JSON; page routes → redirect
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
       }
@@ -163,11 +114,11 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
     return response;
   }
 
-  // ── /kds/* and /api/chef/* — require chef role ────────────────────────
+  // ── /kds/* and /api/chef/* — require chef/staff role ────────────────────
   if (pathname.startsWith("/kds") || pathname.startsWith("/api/chef")) {
-    const chefToken = req.cookies.get("chef_token")?.value;
-    if (chefToken) {
-      const payload = await verifyChefJWT(chefToken);
+    const staffToken = req.cookies.get("chef_token")?.value;
+    if (staffToken) {
+      const payload = await verifyChefJWT(staffToken);
       if (payload?.restaurantId) {
         if ((payload.role as string) === "waiter") {
           return NextResponse.redirect(new URL("/waiter", req.url));
@@ -179,7 +130,6 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
         return response;
       }
     }
-    // Admin can supervise KDS
     if (session?.user?.restaurantId && (session.user.role === "admin" || session.user.role === "super_admin")) {
       const response = NextResponse.next();
       response.headers.set("x-restaurant-id", session.user.restaurantId);
@@ -193,11 +143,11 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
     return NextResponse.redirect(new URL("/staff-login", req.url));
   }
 
-  // ── /waiter/* and /api/waiter/* — require waiter role ──────────────────
+  // ── /waiter/* and /api/waiter/* — require waiter role ───────────────────
   if (pathname.startsWith("/waiter") || pathname.startsWith("/api/waiter")) {
-    const chefToken = req.cookies.get("chef_token")?.value;
-    if (chefToken) {
-      const payload = await verifyChefJWT(chefToken);
+    const staffToken = req.cookies.get("chef_token")?.value;
+    if (staffToken) {
+      const payload = await verifyChefJWT(staffToken);
       if (payload?.restaurantId) {
         if ((payload.role as string) === "chef") {
           return NextResponse.redirect(new URL("/kds", req.url));
@@ -209,7 +159,6 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
         return response;
       }
     }
-    // Admin can supervise waiter panel
     if (session?.user?.restaurantId && (session.user.role === "admin" || session.user.role === "super_admin")) {
       const response = NextResponse.next();
       response.headers.set("x-restaurant-id", session.user.restaurantId);
@@ -223,7 +172,7 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
     return NextResponse.redirect(new URL("/staff-login", req.url));
   }
 
-  // ── Redirect authenticated users away from auth pages ──────────────────
+  // ── Redirect authenticated users away from auth pages ───────────────────
   if (pathname === "/login" || pathname === "/signup") {
     if (session?.user?.restaurantId) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
@@ -231,9 +180,9 @@ export const proxy = auth(async function proxy(req: NextAuthRequest) {
   }
 
   if (pathname === "/staff-login" || pathname === "/chef-login") {
-    const chefToken = req.cookies.get("chef_token")?.value;
-    if (chefToken) {
-      const payload = await verifyChefJWT(chefToken);
+    const staffToken = req.cookies.get("chef_token")?.value;
+    if (staffToken) {
+      const payload = await verifyChefJWT(staffToken);
       if (payload?.role) {
         const dest = (payload.role as string) === "waiter" ? "/waiter" : "/kds";
         return NextResponse.redirect(new URL(dest, req.url));
@@ -257,10 +206,6 @@ export const config = {
     "/signup",
     "/staff-login",
     "/chef-login",
-    "/api/admin/:path*",
-    "/api/chef/:path*",
-    "/api/waiter/:path*",
-    "/api/auth/otp/send",
-    "/api/customer/orders",
+    "/api/:path*",
   ],
 };
