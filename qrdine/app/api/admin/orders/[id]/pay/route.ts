@@ -4,6 +4,8 @@ import { resolveStaffAuth } from "@/lib/waiter-auth";
 import { success, error } from "@/lib/api-response";
 import { calculateBill, generateBillNumber } from "@/lib/billing";
 import { emitSocketEvent } from "@/lib/socket-emitter";
+import { auditLog } from "@/lib/audit";
+import { captureException } from "@/lib/sentry";
 import { z } from "zod";
 
 /**
@@ -136,9 +138,23 @@ export async function POST(
       },
     });
 
+    await auditLog({
+      restaurantId,
+      userId: ctx.userId,
+      action: "order.paid",
+      entityType: "order",
+      entityId: orderId,
+      newValue: {
+        payment_method,
+        bill_number: result.billNumber,
+        total: result.total,
+      },
+    });
+
     return success({ paid: true, bill_id: result.billId, bill_number: result.billNumber, total: result.total });
   } catch (err) {
     console.error("[POST /api/admin/orders/[id]/pay]", err);
+    captureException(err);
     return error("Failed to settle order", 500);
   }
 }

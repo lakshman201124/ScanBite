@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { issueSetupCode } from "@/lib/setup-code";
+import { auditLog } from "@/lib/audit";
+import { captureException } from "@/lib/sentry";
 import { z } from "zod";
 
 const schema = z.object({ staffId: z.string().uuid() });
@@ -39,12 +41,22 @@ export async function POST(request: NextRequest) {
 
     const setupCode = await issueSetupCode(staffId);
 
+    await auditLog({
+      restaurantId,
+      userId: session.user.id ?? "",
+      action: "staff.pin_reset",
+      entityType: "user",
+      entityId: staffId,
+      newValue: { name: staff.name, role: staff.role },
+    });
+
     return NextResponse.json({
       success: true,
       data: { staffId: staff.id, name: staff.name, role: staff.role, setupCode },
     });
   } catch (err) {
     console.error("[POST /api/admin/staff/reset-pin]", err);
+    captureException(err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }

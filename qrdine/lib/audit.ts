@@ -3,9 +3,9 @@ import { prisma } from '@/lib/db';
 
 interface AuditEntry {
   restaurantId: string;
-  userId: string;
-  action: string;              // 'menu_item.create', 'order.cancel', 'table.delete'
-  entityType: string;          // 'menu_item', 'order', 'table'
+  userId?: string;
+  action: string;
+  entityType: string;
   entityId: string;
   oldValue?: Record<string, unknown>;
   newValue?: Record<string, unknown>;
@@ -17,7 +17,7 @@ export async function auditLog(entry: AuditEntry): Promise<void> {
     await prisma.auditLog.create({
       data: {
         restaurant_id: entry.restaurantId,
-        user_id: entry.userId,
+        user_id: entry.userId ?? null,
         action: entry.action,
         entity_type: entry.entityType,
         entity_id: entry.entityId,

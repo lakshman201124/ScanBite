@@ -6,6 +6,8 @@ import { success, error, unauthorized } from "@/lib/api-response";
 import { z } from "zod";
 import { UserRole } from "@prisma/client";
 import { issueSetupCode } from "@/lib/setup-code";
+import { auditLog } from "@/lib/audit";
+import { captureException } from "@/lib/sentry";
 
 export async function GET(_request: NextRequest) {
   try {
@@ -63,9 +65,20 @@ export async function POST(request: NextRequest) {
     });
 
     const setupCode = await issueSetupCode(staff.id);
+
+    await auditLog({
+      restaurantId,
+      userId: session.user.id ?? "",
+      action: "staff.created",
+      entityType: "user",
+      entityId: staff.id,
+      newValue: { name: staff.name, role: staff.role },
+    });
+
     return success({ id: staff.id, name: staff.name, role: staff.role, setupCode }, 201);
   } catch (err) {
     console.error("[POST /api/admin/staff]", err);
+    captureException(err);
     return error("Failed to create staff member", 500);
   }
 }
@@ -96,9 +109,21 @@ export async function PATCH(request: NextRequest) {
       where: { id }, data,
       select: { id: true, name: true, role: true, is_active: true },
     });
+
+    await auditLog({
+      restaurantId,
+      userId: session.user.id ?? "",
+      action: "staff.updated",
+      entityType: "user",
+      entityId: id,
+      oldValue: { name: staffMember.name, role: staffMember.role, is_active: staffMember.is_active },
+      newValue: data,
+    });
+
     return success(updated);
   } catch (err) {
     console.error("[PATCH /api/admin/staff]", err);
+    captureException(err);
     return error("Failed to update staff member", 500);
   }
 }
@@ -114,9 +139,20 @@ export async function DELETE(request: NextRequest) {
     const staffMember = await prisma.user.findFirst({ where: { id, restaurant_id: restaurantId } });
     if (!staffMember) return error("Staff member not found", 404);
     await prisma.user.delete({ where: { id } });
+
+    await auditLog({
+      restaurantId,
+      userId: session.user.id ?? "",
+      action: "staff.deleted",
+      entityType: "user",
+      entityId: id,
+      oldValue: { name: staffMember.name, role: staffMember.role },
+    });
+
     return success({ message: "Staff member deleted successfully" });
   } catch (err) {
     console.error("[DELETE /api/admin/staff]", err);
+    captureException(err);
     return error("Failed to delete staff member", 500);
   }
 }

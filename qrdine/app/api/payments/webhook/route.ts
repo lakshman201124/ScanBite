@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { verifyWebhookSignature, isOnlinePaymentsEnabled } from "@/lib/razorpay";
 import { emitSocketEvent } from "@/lib/socket-emitter";
 import { calculateBill, generateBillNumber } from "@/lib/billing";
+import { auditLog } from "@/lib/audit";
+import { captureException } from "@/lib/sentry";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,11 +19,12 @@ export async function POST(request: NextRequest) {
     if (!verifyWebhookSignature(rawBody, signature)) {
       // A bad signature means we cannot trust the payload, so there is no valid
       // restaurant_id to scope a DB audit row to (the AuditLog FK requires a real
-      // one). Log it for observability instead of writing a fake "unknown" row,
-      // which previously violated the foreign key and threw.
+      // one). Capture to Sentry for fraud observability instead.
+      const fraudErr = new Error("Webhook fraud: invalid Razorpay signature");
       console.warn("[webhook] invalid Razorpay signature — possible fraud attempt", {
         signaturePrefix: signature.slice(0, 12),
       });
+      captureException(fraudErr);
       return NextResponse.json({ success: false, error: "Invalid signature." }, { status: 400 });
     }
 
@@ -134,9 +137,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await auditLog({
+      restaurantId: order.restaurant_id,
+      action: "order.paid_online",
+      entityType: "order",
+      entityId: order.id,
+      newValue: {
+        razorpay_payment_id: razorpayPaymentId,
+        razorpay_order_id: razorpayOrderId,
+        amount: payment.amount / 100,
+        method: paymentMethod,
+      },
+    });
+
     return NextResponse.json({ success: true, received: true, order_id: order.id });
   } catch (err) {
     console.error("[POST /api/payments/webhook]", err);
+    captureException(err);
     return NextResponse.json({ success: false, error: "Webhook processing failed." }, { status: 500 });
   }
 }

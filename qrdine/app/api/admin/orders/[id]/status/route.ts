@@ -5,6 +5,8 @@ import { z } from "zod";
 import { success, error } from "@/lib/api-response";
 import { emitSocketEvent } from "@/lib/socket-emitter";
 import { invalidateAdminOrdersCache } from "@/lib/redis";
+import { auditLog } from "@/lib/audit";
+import { captureException } from "@/lib/sentry";
 import type { OrderStatus } from "@/types";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -91,9 +93,23 @@ export async function PATCH(
 
     await invalidateAdminOrdersCache(restaurantId);
 
+    await auditLog({
+      restaurantId,
+      userId: ctx.userId,
+      action: "order.status_changed",
+      entityType: "order",
+      entityId: orderId,
+      oldValue: { status: order.status },
+      newValue: {
+        status: newStatus,
+        ...(cancellation_reason ? { cancellation_reason } : {}),
+      },
+    });
+
     return success({ orderId, status: newStatus });
   } catch (err) {
     console.error("[PATCH /api/admin/orders/[id]/status]", err);
+    captureException(err);
     return error("Failed to update order status", 500);
   }
 }
