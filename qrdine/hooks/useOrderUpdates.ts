@@ -12,6 +12,7 @@ export interface LiveOrder {
   items: Array<{ name: string; quantity: number; price: number }>;
   notes: string | null;
   status: string;
+  payment_status?: "unpaid" | "paid" | "refunded";
   createdAt: string;
   updatedAt: string;
   cancellationReason?: string;

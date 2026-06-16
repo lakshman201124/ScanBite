@@ -611,6 +611,7 @@ export function OrdersPageClient({ restaurantId, token, initialOrders, tables, m
   const { orders } = useOrderUpdates({ mode: "admin", restaurantId, token, initialOrders });
   const [tab, setTab] = useState<TabFilter>("all");
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
+  const [payFilter, setPayFilter] = useState<"all" | "unpaid" | "paid">("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -647,13 +648,15 @@ export function OrdersPageClient({ restaurantId, token, initialOrders, tables, m
       }
       if (channelFilter === "dine-in"  && !o.tableName) return false;
       if (channelFilter === "takeaway" &&  o.tableName) return false;
+      if (payFilter === "unpaid" && o.payment_status === "paid") return false;
+      if (payFilter === "paid"   && o.payment_status !== "paid") return false;
       if (search) {
         const q = search.toLowerCase();
         if (!o.orderNumber.includes(q) && !o.tableName?.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [todayOrders, tab, channelFilter, search]);
+  }, [todayOrders, tab, channelFilter, payFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageOrders = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -775,6 +778,19 @@ export function OrdersPageClient({ restaurantId, token, initialOrders, tables, m
             ))}
           </div>
           <div className="ord-tabs-row__spacer" />
+          {/* Payment status filter */}
+          <button
+            className={`ord-chip${payFilter !== "all" ? " is-on" : ""}`}
+            onClick={() => {
+              setPayFilter(f => f === "all" ? "unpaid" : f === "unpaid" ? "paid" : "all");
+              setPage(1);
+            }}
+            title="Cycle: All → Unpaid → Paid"
+            style={{ color: payFilter === "paid" ? "var(--green)" : payFilter === "unpaid" ? "var(--red)" : undefined }}
+          >
+            {payFilter === "all" ? "All payments" : payFilter === "unpaid" ? "Unpaid" : "Paid"}
+            <ChevronDown size={11} />
+          </button>
           <button
             className={`ord-chip${channelFilter !== "all" ? " is-on" : ""}`}
             onClick={() => {
