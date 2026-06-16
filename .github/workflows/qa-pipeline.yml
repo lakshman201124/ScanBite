@@ -10,9 +10,7 @@ on:
 env:
   TEST_ADMIN_EMAIL: admin@spicegarden.com
   TEST_ADMIN_PASSWORD: admin123
-  TEST_CHEF_SLUG: spice-garden
-  TEST_CHEF_PIN: "1234"
-  TEST_OTP_BYPASS: "true"
+  TEST_RESTAURANT_SLUG: spice-garden
   NODE_VERSION: "20"
 
 # ─── Setup: node via actions/setup-node, pnpm via npm install -g ───────────────
@@ -48,6 +46,48 @@ jobs:
         working-directory: qrdine
         run: pnpm lint
 
+      # ── Security grep gates ──────────────────────────────────────────────
+      # These are hard blockers: the build must never contain these patterns.
+
+      - name: "Grep gate: no fallback secrets"
+        working-directory: qrdine
+        run: |
+          # Fail if any lib/secret or auth file uses a fallback string literal
+          # (e.g.  ?? "fallback"  or  ?? "dev-secret"). All secrets must fail-closed.
+          if grep -rn --include="*.ts" --include="*.tsx" \
+              -E '(\?\?|or)\s*["'"'"'][^"'"'"']*fallback[^"'"'"']*["'"'"']' \
+              lib/ app/api/ 2>/dev/null | grep -v "node_modules"; then
+            echo "ERROR: fallback secret found — secrets must fail-closed."
+            exit 1
+          fi
+          echo "PASS: no fallback secrets."
+
+      - name: "Grep gate: no 'as any' in app/api or lib"
+        working-directory: qrdine
+        run: |
+          # 'as any' in API routes or lib bypasses type safety and may hide
+          # tenant-isolation bugs. All was-any cases were removed in Wave 1.
+          if grep -rn --include="*.ts" --include="*.tsx" \
+              -E '\bas any\b' app/api/ lib/ 2>/dev/null | grep -v "node_modules"; then
+            echo "ERROR: 'as any' found in app/api or lib — remove the cast."
+            exit 1
+          fi
+          echo "PASS: no 'as any' in app/api or lib."
+
+      - name: "Grep gate: restaurant_id never from request body/query/header"
+        working-directory: qrdine
+        run: |
+          # restaurant_id MUST come only from the authenticated principal (JWT/session).
+          # It must never be read from req.body, searchParams, headers, or query params.
+          if grep -rn --include="*.ts" \
+              -E 'searchParams\.get\(["\'"'"']restaurant_?id["\'"'"']\)|body\.(restaurant_?id|restaurantId)|headers\.get\(["\'"'"']restaurant' \
+              app/api/ 2>/dev/null | grep -v "node_modules" | grep -v "verify-restaurant"; then
+            echo "ERROR: restaurant_id read from untrusted source (body/query/header)."
+            echo "       It must ONLY come from the authenticated session/JWT."
+            exit 1
+          fi
+          echo "PASS: restaurant_id sourced only from principal."
+
   # ════════════════════════════════════════════════════════════════════════════
   # JOB 1 — Auth Tests  (gates all browser jobs)
   # ════════════════════════════════════════════════════════════════════════════
@@ -67,9 +107,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-      TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -492,6 +530,79 @@ jobs:
           retention-days: 14
 
   # ════════════════════════════════════════════════════════════════════════════
+  # JOB 9b — Unit Tests (pure, no server required)
+  # ════════════════════════════════════════════════════════════════════════════
+  unit-tests:
+    name: "Unit Tests (PIN / billing / order-number)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: static-analysis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        run: npm install -g pnpm@10
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright (Chromium)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+      - name: Run unit tests
+        working-directory: qrdine
+        run: npx playwright test --project=unit-tests --reporter=list,json,html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-unit-tests
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 9c — Integration Tests (rate-limit / oversell / idempotency)
+  # ════════════════════════════════════════════════════════════════════════════
+  integration-tests:
+    name: "Integration Tests (rate-limit / oversell / mark-paid)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: auth-tests
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      NEXTAUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pnpm
+        run: npm install -g pnpm@10
+      - name: Install dependencies
+        working-directory: qrdine
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright (Chromium)
+        working-directory: qrdine
+        run: npx playwright install chromium --with-deps
+      - name: Run integration tests
+        working-directory: qrdine
+        run: npx playwright test --project=integration-tests --reporter=list,json,html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-integration
+          path: qrdine/test-results/
+          retention-days: 14
+
+  # ════════════════════════════════════════════════════════════════════════════
   # JOB 10 — UI Quality Agent Pipeline (push to main only)
   # ════════════════════════════════════════════════════════════════════════════
   ui-quality-audit:
@@ -553,14 +664,16 @@ jobs:
   # JOB 11 — Final Gate
   # ════════════════════════════════════════════════════════════════════════════
   all-clear:
-    name: "All Clear ✅"
+    name: "All Clear"
     runs-on: ubuntu-latest
     if: always()
     needs:
       - static-analysis
+      - unit-tests
       - auth-tests
       - api-tests
       - security-tests
+      - integration-tests
       - admin-ui
       - customer-mobile
       - chef-kds
@@ -572,9 +685,11 @@ jobs:
         run: |
           results=(
             "${{ needs.static-analysis.result }}"
+            "${{ needs.unit-tests.result }}"
             "${{ needs.auth-tests.result }}"
             "${{ needs.api-tests.result }}"
             "${{ needs.security-tests.result }}"
+            "${{ needs.integration-tests.result }}"
             "${{ needs.admin-ui.result }}"
             "${{ needs.customer-mobile.result }}"
             "${{ needs.chef-kds.result }}"
@@ -585,9 +700,9 @@ jobs:
           failed=0
           for result in "${results[@]}"; do
             if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-              echo "❌ A required job failed: $result"
+              echo "FAIL: A required job did not succeed: $result"
               failed=1
             fi
           done
           if [[ $failed -eq 1 ]]; then exit 1; fi
-          echo "✅ All required jobs passed."
+          echo "PASS: All required jobs passed."
